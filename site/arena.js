@@ -1,3 +1,8 @@
+var explosionImages = null;
+var shellImage = null;
+var hullImage = null;
+var turretImage = null;
+var barrelImage = null;
 var arena = null;
 
 var webSocket = new WebSocket("ws://localhost:8000/api/watch");
@@ -12,6 +17,23 @@ webSocket.onmessage = function (event) {
     window.requestAnimationFrame(draw);
 };
 
+window.onload = function () {
+  explosionImages = [
+    document.getElementById("explosion0"),
+    document.getElementById("explosion1"),
+    document.getElementById("explosion2"),
+    document.getElementById("explosion3"),
+    document.getElementById("explosion4"),
+    document.getElementById("explosion5"),
+    document.getElementById("explosion6"),
+    document.getElementById("explosion7")
+  ];
+  shellImage = document.getElementById("lightShell");
+  hullImage = document.getElementById("hull1");
+  turretImage = document.getElementById("gun1B");
+  barrelImage = document.getElementById("gun1A");
+}
+
 function draw(timestamp) {
     var ctx = document.getElementById('canvas').getContext('2d');
 
@@ -23,18 +45,41 @@ function draw(timestamp) {
 
 
     arena.robots.forEach(robot => {
-        // console.log(Math.round(robot.position.x * 1000), Math.round(robot.position.y * 1000))
-        ctx.beginPath();
-        ctx.strokeStyle = 'black';
-        ctx.arc(Math.round(robot.position.x * 1000), Math.round(robot.position.y * 1000), 1000 * robot.radius, 0, 2 * Math.PI);
-        ctx.stroke();
+      const img = hullImage;
+      const dx = robot.position.x * 1000;
+      const dy = robot.position.y * 1000;
+      
+      ctx.save();
+      ctx.translate(dx, dy);
+      console.log(`A robot at ${robot.tank_angle}`)
+      ctx.rotate(robot.tank_angle/180 * Math.PI);
+      ctx.drawImage(img, - img.width / 2, - img.height / 2);
+      ctx.rotate(Math.PI / 2 + robot.turret_angle/180 * Math.PI);
+      ctx.drawImage(turretImage, - turretImage.width / 2, - turretImage.height / 2);
+      ctx.translate(0, -turretImage.height / 2)
+      ctx.drawImage(barrelImage, - barrelImage.width / 2, - barrelImage.height);
+
+      ctx.restore();
     });
 
     arena.missiles.forEach(missile => {
-        ctx.beginPath();
-        ctx.strokeStyle = 'black';
-        ctx.arc(Math.round(missile.position.x * 1000), Math.round(missile.position.y * 1000), 3 + missile.explode_progress * 5, 0, 2 * Math.PI);
-        ctx.stroke();
+        if (!missile.exploding) {
+          const img = shellImage;
+          const dx = missile.position.x * 1000;
+          const dy = missile.position.y * 1000;
+          
+          ctx.save();
+          ctx.translate(dx, dy);
+          ctx.rotate(Math.PI / 2 + missile.angle/180 * Math.PI );
+          ctx.drawImage(img, - img.width / 2, - img.height / 2);
+          ctx.restore();
+          
+        } else {
+          const img = explosionImages[missile.explode_progress];
+          const dx = missile.position.x * 1000 - img.width / 2;
+          const dy = missile.position.y * 1000 - img.height / 2;
+          ctx.drawImage(img, dx, dy);
+        }
     });
 }
 

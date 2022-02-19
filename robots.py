@@ -13,12 +13,12 @@ class GameParameters:
     MAX_TURN_RADAR_ANGLE = 180.0
     MOTOR_POWER = 0.001
     BULLET_VELOCITY = .02
-    FPS = 30
+    FPS = 20
     MAX_DAMAGE = 0.1
     WEAPON_RECHARGE_RATE = 0.01
     ARENA_WIDTH = 1000.0
     ARENA_HEIGHT = 1000.0
-    EXPLODE_FRAMES = 3
+    EXPLODE_FRAMES = 8
 
 
 def random_angle() -> float:
@@ -90,7 +90,7 @@ class Missile:
 
     def live(self) -> bool:
         """Returns whether missile has finished exploding"""
-        return self.explode_progress <= GameParameters.EXPLODE_FRAMES
+        return self.explode_progress < GameParameters.EXPLODE_FRAMES
 
 
 class RobotCommandType(Enum):
@@ -135,7 +135,7 @@ class Arena:
             energy_noise = (random() - 0.5) * GameParameters.WEAPON_RECHARGE_RATE
             requested_energy = min(GameParameters.MAX_DAMAGE, command.parameter)
             energy = min(robot.weapon_energy, requested_energy) + energy_noise
-            angle = robot.tank_angle + robot.turret_angle
+            angle = (robot.tank_angle + robot.turret_angle) % 360.0
             robot.weapon_energy = max(0, robot.weapon_energy - energy)
             start_position = replace(robot.position)
             start_position.x += robot.radius * cos(angle / 180 * pi)
