@@ -1,8 +1,10 @@
+const SCALE = 0.33;
 var explosionImages = null;
 var shellImage = null;
 var hullImage = null;
 var turretImage = null;
 var barrelImage = null;
+var trackImages = null;
 var arena = null;
 
 var webSocket = new WebSocket("ws://localhost:8000/api/watch");
@@ -32,6 +34,10 @@ window.onload = function () {
   hullImage = document.getElementById("hull1");
   turretImage = document.getElementById("gun1B");
   barrelImage = document.getElementById("gun1A");
+  trackImages = [
+    document.getElementById("track1A"),
+    document.getElementById("track1B")
+  ];
 }
 
 function draw(timestamp) {
@@ -42,22 +48,32 @@ function draw(timestamp) {
     ctx.strokeStyle = 'black';
     ctx.rect(0, 0, 1000, 1000);
     ctx.stroke();
+    ctx.restore();
 
 
     arena.robots.forEach(robot => {
       const img = hullImage;
       const dx = robot.position.x * 1000;
       const dy = robot.position.y * 1000;
+      const trackImgIndex = Math.round(timestamp * 5 * robot.velocity) % 2;
       
       ctx.save();
       ctx.translate(dx, dy);
-      console.log(`A robot at ${robot.tank_angle}`)
-      ctx.rotate(robot.tank_angle/180 * Math.PI);
-      ctx.drawImage(img, - img.width / 2, - img.height / 2);
-      ctx.rotate(Math.PI / 2 + robot.turret_angle/180 * Math.PI);
-      ctx.drawImage(turretImage, - turretImage.width / 2, - turretImage.height / 2);
-      ctx.translate(0, -turretImage.height / 2)
-      ctx.drawImage(barrelImage, - barrelImage.width / 2, - barrelImage.height);
+      ctx.scale(SCALE, SCALE);
+      
+      // Draw the tank
+      ctx.rotate(Math.PI / 2 + robot.tank_angle/180 * Math.PI);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+      
+      // Draw the tracks
+      var trackImage = trackImages[trackImgIndex];
+      ctx.drawImage(trackImage, -img.width * 0.3, -trackImage.height / 2);
+      ctx.drawImage(trackImage, +img.width * 0.3 - trackImage.width, -trackImage.height / 2);
+
+      // Draw the turret and barrel
+      ctx.rotate(robot.turret_angle/180 * Math.PI);
+      ctx.drawImage(turretImage, -turretImage.width / 2, -turretImage.height / 2);      
+      ctx.drawImage(barrelImage, -barrelImage.width / 2, -barrelImage.height / 2 -turretImage.height );
 
       ctx.restore();
     });
@@ -70,15 +86,20 @@ function draw(timestamp) {
           
           ctx.save();
           ctx.translate(dx, dy);
+          ctx.scale(SCALE, SCALE)
           ctx.rotate(Math.PI / 2 + missile.angle/180 * Math.PI );
           ctx.drawImage(img, - img.width / 2, - img.height / 2);
           ctx.restore();
           
         } else {
           const img = explosionImages[missile.explode_progress];
-          const dx = missile.position.x * 1000 - img.width / 2;
-          const dy = missile.position.y * 1000 - img.height / 2;
-          ctx.drawImage(img, dx, dy);
+          const dx = missile.position.x * 1000 ;
+          const dy = missile.position.y * 1000 ;
+          ctx.save();
+          ctx.translate(dx, dy);
+          ctx.scale(SCALE, SCALE)
+          ctx.drawImage(img, - img.width / 2, - img.height / 2);
+          ctx.restore();
         }
     });
 }
