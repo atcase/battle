@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum, auto
 from itertools import product
 from math import atan2, cos, sin, pi, sqrt
@@ -8,14 +8,14 @@ from typing import Callable, Dict, List, Optional
 
 
 class GameParameters:
-    MAX_VELOCITY = 10.0
+    MAX_VELOCITY = 0.01
     MAX_TURN_ANGLE = 45.0
     MAX_TURN_RADAR_ANGLE = 180.0
-    MOTOR_POWER = 1.0
-    BULLET_VELOCITY = 20.0
+    MOTOR_POWER = 0.001
+    BULLET_VELOCITY = .02
     FPS = 30
     MAX_DAMAGE = 0.1
-    WEAPON_RECHARGE_RATE = 0.1
+    WEAPON_RECHARGE_RATE = 0.01
     ARENA_WIDTH = 1000.0
     ARENA_HEIGHT = 1000.0
     EXPLODE_FRAMES = 3
@@ -35,12 +35,12 @@ class Position:
     @classmethod
     def random(cls) -> "Position":
         """Returns a new random position]"""
-        return cls(x=random() * GameParameters.ARENA_WIDTH, y=random() * GameParameters.ARENA_HEIGHT)
+        return cls(x=random(), y=random())
 
     def clip(self) -> None:
         """Updates the position co-ordinates so they are within the bounds of the arena"""
-        self.x = max(0, min(GameParameters.ARENA_WIDTH, self.x))
-        self.y = max(0, min(GameParameters.ARENA_HEIGHT, self.y))
+        self.x = max(0, min(1.0, self.x))
+        self.y = max(0, min(1.0, self.y))
 
     def __sub__(self, other: "Position") -> "PositionDelta":
         """Return the delta between two positions"""
@@ -71,8 +71,9 @@ class Robot:
     radar_angle: float = 0.0
     health: float = 1.0
     weapon_energy: float = 1.0
-    radius: float = 0.01
+    radius: float = 0.02
     radar_pinged: bool = False
+    got_hit: bool = False
 
     def live(self) -> bool:
         """Returns whether robot is still alive"""
@@ -132,10 +133,15 @@ class Arena:
             # Add a bit of randomness to the weapon energy for entertainment
             # This will also help with tie breakers
             energy_noise = (random() - 0.5) * GameParameters.WEAPON_RECHARGE_RATE
-            energy = min(robot.weapon_energy, command.parameter) + energy_noise
+            requested_energy = min(GameParameters.MAX_DAMAGE, command.parameter)
+            energy = min(robot.weapon_energy, requested_energy) + energy_noise
             angle = robot.tank_angle + robot.turret_angle
-            robot.weapon_energy = max(0, robot.weapon_energy - command.parameter)
-            m = Missile(robot.position, angle, energy)
+            robot.weapon_energy = max(0, robot.weapon_energy - energy)
+            start_position = replace(robot.position)
+            start_position.x += robot.radius * cos(angle / 180 * pi)
+            start_position.y += robot.radius * sin(angle / 180 * pi)
+            m = Missile(start_position, angle, energy)
+            print(m)
             self.missiles.append(m)
         elif command.command_type is RobotCommandType.TURN_TANK:
             robot.tank_angle += min(GameParameters.MAX_TURN_ANGLE, max(-GameParameters.MAX_TURN_ANGLE, command.parameter))
@@ -151,6 +157,10 @@ class Arena:
         robot.position.x += robot.velocity * cos(robot.tank_angle / 180 * pi)
         robot.position.y += robot.velocity * sin(robot.tank_angle / 180 * pi)
         robot.position.clip()
+
+        # Recharge weapon
+        robot.weapon_energy += GameParameters.WEAPON_RECHARGE_RATE
+        robot.weapon_energy = min(GameParameters.MAX_DAMAGE, robot.weapon_energy)
 
     def update_missile(self, missile: Missile) -> None:
         """Updates the state of a single missile"""
@@ -180,17 +190,22 @@ class Arena:
         self.missiles = [m for m in self.missiles if m.live()]
 
         # Missile - Robot collision detection
+        for robot in self.robots:
+            robot.got_hit = False
         for missile in self.missiles:
             for robot in self.robots:
                 if not robot.live():
                     continue
+                # print(abs(`robot.position - missile.position))
                 if abs(robot.position - missile.position) < robot.radius:
                     if not missile.exploding:
-                        print(f"{robot.name} was hit!")
+                        print(f"{robot.name} was hit! {robot.health=} {missile.energy=}")
                         robot.health -= missile.energy
                         missile.exploding = True
-            if 0 >= missile.position.x >= GameParameters.ARENA_WIDTH or 0 >= missile.position.y >= GameParameters.ARENA_HEIGHT:
-                print("Missile hit edge")
+                        robot.got_hit = True
+                        break
+            if missile.position.x <= 0 or missile.position.x >= 1.0 or missile.position.y <= 0 or missile.position.y >= 1.0:
+                print(f"Missile hit edge: {missile.position}")
                 missile.exploding = True
 
         # Update radar pings
@@ -216,31 +231,3 @@ class Arena:
             # If all robots are dead, return the one that sustained the least damage
             return max(self.robots, key=lambda r: r.health)
         return None
-
-
-@dataclass
-class DummyDriver:
-    pinged: bool = False
-
-    def __call__(self, r: Robot) -> RobotCommand:
-        if r.radar_pinged or self.pinged:
-            self.pinged = True
-            return RobotCommand(RobotCommandType.FIRE, 1.0)
-        return RobotCommand(RobotCommandType.TURN_TURRET, 5.0)
-
-
-if __name__ == "__main__":
-    a = Arena()
-    robot1 = Robot("sample1")
-    robot2 = Robot("sample2")
-    a.robots.append(robot1)
-    a.robots.append(robot2)
-    a.robot_drivers["sample1"] = DummyDriver()
-    a.robot_drivers["sample2"] = DummyDriver()
-    while not (winner := a.get_winner()):
-        print('---')
-        a.update_arena()
-        for r in a.robots:
-            print(r)
-        sleep(1/GameParameters.FPS)
-    print(f"{winner.name} is the winner!")
