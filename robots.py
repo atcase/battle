@@ -1,20 +1,24 @@
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from math import cos, sin, pi
+from itertools import product
+from math import atan2, cos, sin, pi, sqrt
 from random import random
-from typing import Callable, Dict, List
+from time import sleep
+from typing import Callable, Dict, List, Optional
 
 
 class GameParameters:
     MAX_VELOCITY = 10.0
-    MAX_TURN_ANGLE = 45
+    MAX_TURN_ANGLE = 45.0
+    MAX_TURN_RADAR_ANGLE = 180.0
     MOTOR_POWER = 1.0
     BULLET_VELOCITY = 20.0
-    FPS = 10
+    FPS = 30
     MAX_DAMAGE = 0.1
     WEAPON_RECHARGE_RATE = 0.1
     ARENA_WIDTH = 1000.0
     ARENA_HEIGHT = 1000.0
+    EXPLODE_FRAMES = 3
 
 
 def random_angle() -> float:
@@ -38,6 +42,23 @@ class Position:
         self.x = max(0, min(GameParameters.ARENA_WIDTH, self.x))
         self.y = max(0, min(GameParameters.ARENA_HEIGHT, self.y))
 
+    def __sub__(self, other: "Position") -> "PositionDelta":
+        """Return the delta between two positions"""
+        return PositionDelta(self.x - other.x, self.y - other.y)
+
+
+@dataclass
+class PositionDelta(Position):
+    """A position delta, used to determine distance between two positions"""
+    x: float
+    y: float
+
+    def __abs__(self) -> float:
+        return sqrt(self.x * self.x + self.y * self.y)
+
+    def angle(self) -> float:
+        return atan2(self.y, self.x) * 180.0 / pi
+
 
 @dataclass
 class Robot:
@@ -51,6 +72,11 @@ class Robot:
     health: float = 1.0
     weapon_energy: float = 1.0
     radius: float = 0.01
+    radar_pinged: bool = False
+
+    def live(self) -> bool:
+        """Returns whether robot is still alive"""
+        return self.health > 0.0
 
 @dataclass
 class Missile:
@@ -60,6 +86,10 @@ class Missile:
     energy: float
     exploding: bool = False
     explode_progress: int = 0
+
+    def live(self) -> bool:
+        """Returns whether missile has finished exploding"""
+        return self.explode_progress <= GameParameters.EXPLODE_FRAMES
 
 
 class RobotCommandType(Enum):
@@ -91,28 +121,32 @@ class Arena:
 
     def update_robot(self, robot: Robot, command: RobotCommand) -> None:
         """Updates the state of the arena and a single robot based on a command"""
-        if command == RobotCommandType.ACCELERATE:
+        print(f"{robot.name} chose to {command.command_type.name}({command.parameter})")
+        if command.command_type is RobotCommandType.ACCELERATE:
             robot.velocity += GameParameters.MOTOR_POWER
             robot.velocity = min(GameParameters.MAX_VELOCITY, robot.velocity)
-        elif command == RobotCommandType.DECELERATE:
+        elif command.command_type is RobotCommandType.DECELERATE:
             robot.velocity -= GameParameters.MOTOR_POWER
             robot.velocity = max(-GameParameters.MAX_VELOCITY, robot.velocity)
-        elif command == RobotCommandType.FIRE:
-            energy = min(robot.weapon_energy, command.parameter)
+        elif command.command_type is RobotCommandType.FIRE:
+            # Add a bit of randomness to the weapon energy for entertainment
+            # This will also help with tie breakers
+            energy_noise = (random() - 0.5) * GameParameters.WEAPON_RECHARGE_RATE
+            energy = min(robot.weapon_energy, command.parameter) + energy_noise
             angle = robot.tank_angle + robot.turret_angle
             robot.weapon_energy = max(0, robot.weapon_energy - command.parameter)
             m = Missile(robot.position, angle, energy)
             self.missiles.append(m)
-        elif command == RobotCommandType.TURN_TANK:
+        elif command.command_type is RobotCommandType.TURN_TANK:
             robot.tank_angle += min(GameParameters.MAX_TURN_ANGLE, max(-GameParameters.MAX_TURN_ANGLE, command.parameter))
             robot.tank_angle %= 360
-        elif command == RobotCommandType.TURN_TURRET:
+        elif command.command_type is RobotCommandType.TURN_TURRET:
             robot.turret_angle += command.parameter
             robot.turret_angle %= 360
-        elif command == RobotCommandType.TURN_RADAR:
-            robot.radar_angle += command.parameter
+        elif command.command_type is RobotCommandType.TURN_RADAR:
+            robot.radar_angle += min(GameParameters.MAX_TURN_RADAR_ANGLE, max(-GameParameters.MAX_TURN_RADAR_ANGLE, command.parameter))
             robot.radar_angle %= 360
-        
+
         # Update robot position
         robot.position.x += robot.velocity * cos(robot.tank_angle / 180 * pi)
         robot.position.y += robot.velocity * sin(robot.tank_angle / 180 * pi)
@@ -128,23 +162,85 @@ class Arena:
             missile.position.y += v * sin(missile.angle / 180 * pi)
             missile.position.clip()
 
-    def update_arena(self):
+    def update_arena(self) -> None:
         """Updates the state of the arena (all robots & missiles)"""
+        # Save prior radar state
+        prior_radar_angle = {r.name: r.tank_angle + r.turret_angle + r.radar_angle for r in self.robots}
+
         # Update all robots
         for robot in self.robots:
+            if not robot.live():
+                continue
             command = self.robot_drivers[robot.name](robot)
             self.update_robot(robot, command)
+
         # Update all missiles
         for missile in self.missiles:
             self.update_missile(missile)
-        # Collision detection (incl. walls)
-        
+        self.missiles = [m for m in self.missiles if m.live()]
 
-def main():
-    a = Arena(1000, 1000)
-    robot = Robot("sample")
-    a.robots.append(robot)
+        # Missile - Robot collision detection
+        for missile in self.missiles:
+            for robot in self.robots:
+                if not robot.live():
+                    continue
+                if abs(robot.position - missile.position) < robot.radius:
+                    if not missile.exploding:
+                        print(f"{robot.name} was hit!")
+                        robot.health -= missile.energy
+                        missile.exploding = True
+            if 0 >= missile.position.x >= GameParameters.ARENA_WIDTH or 0 >= missile.position.y >= GameParameters.ARENA_HEIGHT:
+                print("Missile hit edge")
+                missile.exploding = True
+
+        # Update radar pings
+        for robot in self.robots:
+            robot.radar_pinged = False
+            for target in self.robots:
+                if robot is target:
+                    continue
+
+                base_angle = prior_radar_angle[robot.name]
+                target_angle = ((target.position - robot.position).angle() - base_angle + 180.0) % 360.0 - 180.0
+                now_angle = (robot.tank_angle + robot.turret_angle + robot.radar_angle - base_angle + 180.0) % 360.0 - 180.0
+                if now_angle > 0 and target_angle > 0 and now_angle > target_angle or now_angle < 0 and target_angle < 0 and now_angle < target_angle:
+                    robot.radar_pinged = True
+                    break
+
+    def get_winner(self) -> Optional[Robot]:
+        """Returns the winner or None if no winner yet"""
+        remaining = [r for r in self.robots if r.live()]
+        if len(remaining) == 1:
+            return remaining[0]
+        if len(remaining) == 0:
+            # If all robots are dead, return the one that sustained the least damage
+            return max(self.robots, key=lambda r: r.health)
+        return None
+
+
+@dataclass
+class DummyDriver:
+    pinged: bool = False
+
+    def __call__(self, r: Robot) -> RobotCommand:
+        if r.radar_pinged or self.pinged:
+            self.pinged = True
+            return RobotCommand(RobotCommandType.FIRE, 1.0)
+        return RobotCommand(RobotCommandType.TURN_TURRET, 5.0)
 
 
 if __name__ == "__main__":
-    main()
+    a = Arena()
+    robot1 = Robot("sample1")
+    robot2 = Robot("sample2")
+    a.robots.append(robot1)
+    a.robots.append(robot2)
+    a.robot_drivers["sample1"] = DummyDriver()
+    a.robot_drivers["sample2"] = DummyDriver()
+    while not (winner := a.get_winner()):
+        print('---')
+        a.update_arena()
+        for r in a.robots:
+            print(r)
+        sleep(1/GameParameters.FPS)
+    print(f"{winner.name} is the winner!")
