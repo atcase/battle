@@ -8,7 +8,7 @@ from typing import Callable, Dict, List, Optional
 
 
 class GameParameters:
-    MAX_VELOCITY = 0.01
+    MAX_VELOCITY = 0.005
     MAX_TURN_ANGLE = 45.0
     MAX_TURN_RADAR_ANGLE = 180.0
     MOTOR_POWER = 0.001
@@ -37,10 +37,15 @@ class Position:
         """Returns a new random position]"""
         return cls(x=random(), y=random())
 
-    def clip(self) -> None:
-        """Updates the position co-ordinates so they are within the bounds of the arena"""
-        self.x = max(0, min(1.0, self.x))
-        self.y = max(0, min(1.0, self.y))
+    def clip(self, margin: float = 0.0) -> bool:
+        """Updates the position co-ordinates so they are within the bounds of the arena. Returns true if
+        changed."""
+        new_x = max(margin, min(1.0 - margin, self.x))
+        new_y = max(margin, min(1.0 - margin, self.y))
+        if (new_x, new_y) != (self.x, self.y):
+            self.x, self.y = (new_x, new_y)
+            return True
+        return False
 
     def __sub__(self, other: "Position") -> "PositionDelta":
         """Return the delta between two positions"""
@@ -74,6 +79,7 @@ class Robot:
     radius: float = 0.02
     radar_pinged: bool = False
     got_hit: bool = False
+    bumped_wall: bool = False
 
     def live(self) -> bool:
         """Returns whether robot is still alive"""
@@ -118,11 +124,12 @@ class Arena:
     """The battle arena"""
     robots: List[Robot] = field(default_factory=list)
     missiles: List[Missile] = field(default_factory=list)
+    winner: Optional[str] = None
     robot_drivers: Dict[str, Driver] = field(default_factory=dict)
 
     def update_robot(self, robot: Robot, command: RobotCommand) -> None:
         """Updates the state of the arena and a single robot based on a command"""
-        print(f"{robot.name} chose to {command.command_type.name}({command.parameter})")
+        # print(f"{robot.name} chose to {command.command_type.name}({command.parameter})")
         if command.command_type is RobotCommandType.ACCELERATE:
             robot.velocity += GameParameters.MOTOR_POWER
             robot.velocity = min(GameParameters.MAX_VELOCITY, robot.velocity)
@@ -141,7 +148,6 @@ class Arena:
             start_position.x += robot.radius * cos(angle / 180 * pi)
             start_position.y += robot.radius * sin(angle / 180 * pi)
             m = Missile(start_position, angle, energy)
-            print(m)
             self.missiles.append(m)
         elif command.command_type is RobotCommandType.TURN_TANK:
             robot.tank_angle += min(GameParameters.MAX_TURN_ANGLE, max(-GameParameters.MAX_TURN_ANGLE, command.parameter))
@@ -156,7 +162,7 @@ class Arena:
         # Update robot position
         robot.position.x += robot.velocity * cos(robot.tank_angle / 180 * pi)
         robot.position.y += robot.velocity * sin(robot.tank_angle / 180 * pi)
-        robot.position.clip()
+        robot.bumped_wall = robot.position.clip(margin=robot.radius)
 
         # Recharge weapon
         robot.weapon_energy += GameParameters.WEAPON_RECHARGE_RATE
@@ -205,7 +211,7 @@ class Arena:
                         robot.got_hit = True
                         break
             if missile.position.x <= 0 or missile.position.x >= 1.0 or missile.position.y <= 0 or missile.position.y >= 1.0:
-                print(f"Missile hit edge: {missile.position}")
+                # print(f"Missile hit edge: {missile.position}")
                 missile.exploding = True
 
         # Update radar pings
