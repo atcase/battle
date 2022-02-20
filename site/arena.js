@@ -64,14 +64,14 @@ function draw(timestamp) {
     ctx.clearRect(1, 1, 1000, 1000);
     ctx.strokeStyle = 'black';
     ctx.fillStyle = 'black';
-    ctx.fillRect(0, 0, 1000, 1000);
+    ctx.fillRect(1, 1, 1000, 1000);
     ctx.stroke();
     ctx.restore();
 
     arena.robots.forEach(robot => {
         const img = hullImage;
-        const dx = robot.position.x * 1000;
-        const dy = robot.position.y * 1000;
+        const dx = robot.position.x;
+        const dy = robot.position.y;
         const trackImgIndex = Math.round(timestamp * 5 * robot.velocity) % 2;
 
         ctx.save();
@@ -83,7 +83,7 @@ function draw(timestamp) {
         ctx.fillStyle = 'red';
         ctx.font = '50px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText(`${robot.name} (${Math.round(robot.health * 1000) / 10}%)`, 0, labely);
+        ctx.fillText(`${robot.name} (${robot.health}%)`, 0, labely);
 
         // Draw the tank
         ctx.rotate(Math.PI / 2 + robot.tank_angle / 180 * Math.PI);
@@ -103,11 +103,11 @@ function draw(timestamp) {
     });
 
     arena.missiles.forEach(missile => {
-        const missileScale = SCALE * 50 * (0.01 + 0.99 * missile.energy);
+        const missileScale = SCALE * .5 * (0.01 + 0.99 * missile.energy);
         if (!missile.exploding) {
             const img = shellImage;
-            const dx = missile.position.x * 1000;
-            const dy = missile.position.y * 1000;
+            const dx = missile.position.x;
+            const dy = missile.position.y;
 
             ctx.save();
             ctx.translate(dx, dy);
@@ -118,8 +118,8 @@ function draw(timestamp) {
 
         } else {
             const img = explosionImages[missile.explode_progress];
-            const dx = missile.position.x * 1000;
-            const dy = missile.position.y * 1000;
+            const dx = missile.position.x
+            const dy = missile.position.y
             ctx.save();
             ctx.translate(dx, dy);
             ctx.scale(missileScale, missileScale)

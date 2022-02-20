@@ -30,7 +30,6 @@ async def runner_task(a: Arena, event: asyncio.Event) -> None:
     print(f"{winner.name} is the winner!")
 
 
-
 async def server_task(arena: Arena, event: asyncio.Event) -> None:
     app = web.Application()
     app["arena"] = arena
@@ -65,9 +64,10 @@ async def watch_handler(request):
     async def send_updates():
         try:
             while True:
-                # print("Waiting for event")
-                await request.app["event"].wait()
-                # print("Got event")
+                try:
+                    await asyncio.wait_for(request.app["event"].wait(), 1.0)
+                except asyncio.TimeoutError:
+                    pass
                 await ws.send_json(arena_state_as_json(request.app["arena"]))
         except Exception as e:
             print(f"Exception: {e!r}")
