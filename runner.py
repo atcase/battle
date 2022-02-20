@@ -35,7 +35,7 @@ async def server_task(arena: Arena, event: asyncio.Event) -> None:
     app.router.add_static("/", STATIC_PATH)
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, "localhost", 8000)
+    site = web.TCPSite(runner, "0.0.0.0", 8000)
     await site.start()
     try:
         await asyncio.Future()
