@@ -14,16 +14,21 @@ INDEX_PATH = STATIC_PATH / "index.html"
 
 async def runner_task(a: Arena, event: asyncio.Event) -> None:
     print(f"Starting battle with: {', '.join(r.name for r in a.robots)}")
-    while not a.get_winner():
+    turns = 0
+    while not a.get_winner() and turns < 6000:
+        turns += 1
         a.update_arena()
         event.set()
         event.clear()
         await asyncio.sleep(1 / GameParameters.FPS)
     winner = a.get_winner()
+    if not winner:
+        winner = max(a.robots, key=lambda r: r.health)
     a.winner = winner.name
     event.set()
     event.clear()
     print(f"{winner.name} is the winner!")
+
 
 
 async def server_task(arena: Arena, event: asyncio.Event) -> None:

@@ -194,6 +194,7 @@ class Arena:
         # Update all robots
         for robot in self.robots:
             if not robot.live():
+                robot.velocity = 0
                 continue
             command = self.robot_drivers[robot.name](robot)
             self.update_robot(robot, command)
