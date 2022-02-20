@@ -12,7 +12,7 @@ class GameParameters:
     MAX_TURN_ANGLE = 45.0
     MAX_TURN_RADAR_ANGLE = 180.0
     MOTOR_POWER = 0.001
-    BULLET_VELOCITY = .02
+    BULLET_VELOCITY = 0.02
     FPS = 20
     MAX_DAMAGE = 0.1
     WEAPON_RECHARGE_RATE = 0.01
@@ -29,6 +29,7 @@ def random_angle() -> float:
 @dataclass
 class Position:
     """A position, used for either robots or missiles"""
+
     x: float
     y: float
 
@@ -55,6 +56,7 @@ class Position:
 @dataclass
 class PositionDelta(Position):
     """A position delta, used to determine distance between two positions"""
+
     x: float
     y: float
 
@@ -68,6 +70,7 @@ class PositionDelta(Position):
 @dataclass
 class Robot:
     """The current state of a single robot"""
+
     name: str
     position: Position = field(default_factory=Position.random)
     velocity: float = 0.0
@@ -85,9 +88,11 @@ class Robot:
         """Returns whether robot is still alive"""
         return self.health > 0.0
 
+
 @dataclass
 class Missile:
     """The current state of a single missile"""
+
     position: Position
     angle: float
     energy: float
@@ -108,6 +113,7 @@ class RobotCommandType(Enum):
     TURN_RADAR = auto()
     IDLE = auto()
 
+
 @dataclass
 class RobotCommand:
     command_type: RobotCommandType
@@ -117,11 +123,10 @@ class RobotCommand:
 Driver = Callable[[Robot], RobotCommand]
 
 
-
-
 @dataclass
 class Arena:
     """The battle arena"""
+
     robots: List[Robot] = field(default_factory=list)
     missiles: List[Missile] = field(default_factory=list)
     winner: Optional[str] = None
@@ -150,13 +155,17 @@ class Arena:
             m = Missile(start_position, angle, energy)
             self.missiles.append(m)
         elif command.command_type is RobotCommandType.TURN_TANK:
-            robot.tank_angle += min(GameParameters.MAX_TURN_ANGLE, max(-GameParameters.MAX_TURN_ANGLE, command.parameter))
+            robot.tank_angle += min(
+                GameParameters.MAX_TURN_ANGLE, max(-GameParameters.MAX_TURN_ANGLE, command.parameter)
+            )
             robot.tank_angle %= 360
         elif command.command_type is RobotCommandType.TURN_TURRET:
             robot.turret_angle += command.parameter
             robot.turret_angle %= 360
         elif command.command_type is RobotCommandType.TURN_RADAR:
-            robot.radar_angle += min(GameParameters.MAX_TURN_RADAR_ANGLE, max(-GameParameters.MAX_TURN_RADAR_ANGLE, command.parameter))
+            robot.radar_angle += min(
+                GameParameters.MAX_TURN_RADAR_ANGLE, max(-GameParameters.MAX_TURN_RADAR_ANGLE, command.parameter)
+            )
             robot.radar_angle %= 360
 
         # Update robot position
@@ -210,7 +219,12 @@ class Arena:
                         missile.exploding = True
                         robot.got_hit = True
                         break
-            if missile.position.x <= 0 or missile.position.x >= 1.0 or missile.position.y <= 0 or missile.position.y >= 1.0:
+            if (
+                missile.position.x <= 0
+                or missile.position.x >= 1.0
+                or missile.position.y <= 0
+                or missile.position.y >= 1.0
+            ):
                 # print(f"Missile hit edge: {missile.position}")
                 missile.exploding = True
 
@@ -223,8 +237,17 @@ class Arena:
 
                 base_angle = prior_radar_angle[robot.name]
                 target_angle = ((target.position - robot.position).angle() - base_angle + 180.0) % 360.0 - 180.0
-                now_angle = (robot.tank_angle + robot.turret_angle + robot.radar_angle - base_angle + 180.0) % 360.0 - 180.0
-                if now_angle > 0 and target_angle > 0 and now_angle > target_angle or now_angle < 0 and target_angle < 0 and now_angle < target_angle:
+                now_angle = (
+                    robot.tank_angle + robot.turret_angle + robot.radar_angle - base_angle + 180.0
+                ) % 360.0 - 180.0
+                if (
+                    now_angle > 0
+                    and target_angle > 0
+                    and now_angle > target_angle
+                    or now_angle < 0
+                    and target_angle < 0
+                    and now_angle < target_angle
+                ):
                     robot.radar_pinged = True
                     break
 

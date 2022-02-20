@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from robots import RobotCommand, RobotCommandType, Robot
 
+
 @dataclass
 class StillDriver:
     """A simple robot driver that spins its turret and fires if its radar pings"""
+
     pinged: bool = False
 
     def __call__(self, r: Robot) -> RobotCommand:
@@ -12,9 +14,11 @@ class StillDriver:
             return RobotCommand(RobotCommandType.FIRE, 1.0)
         return RobotCommand(RobotCommandType.TURN_TURRET, 1.0)
 
+
 @dataclass
 class PongDriver:
     """Starts moving and then maintains the same speed, bouncing off the walls. Fires if radar pings."""
+
     accelerate_countdown: int = 3
 
     def __call__(self, r: Robot) -> RobotCommand:
@@ -28,12 +32,14 @@ class PongDriver:
             return RobotCommand(RobotCommandType.FIRE, 1.0)
         return RobotCommand(RobotCommandType.TURN_TURRET, 3.0)
 
+
 @dataclass
 class RadarDriver:
     """Stationary driver with a radar search mechanism that improves locking on to targets."""
+
     turret_dir: float = 5.0
 
-    def __call__(self, r:Robot) -> RobotCommand:
+    def __call__(self, r: Robot) -> RobotCommand:
         if r.radar_pinged:
             self.turret_dir = -self.turret_dir
             return RobotCommand(RobotCommandType.FIRE, 1.0)

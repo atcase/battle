@@ -10,7 +10,10 @@ var lastUpdate = null;
 var webSocket = null;
 
 function openSocket() {
-    webSocket = new WebSocket("ws://localhost:8000/api/watch");
+    var loc = window.location;
+    var scheme = loc.protocol === "https:" ? "wss:" : "ws:";
+
+    webSocket = new WebSocket(`${scheme}//${loc.host}/api/watch`);
 
     webSocket.onopen = function (event) {
         console.log("open websocket")

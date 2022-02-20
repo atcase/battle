@@ -11,6 +11,7 @@ from example_drivers import PongDriver, RadarDriver, StillDriver
 STATIC_PATH = Path(__file__).parent / "site"
 INDEX_PATH = STATIC_PATH / "index.html"
 
+
 async def runner_task(a: Arena, event: asyncio.Event) -> None:
     print(f"Starting battle with: {', '.join(r.name for r in a.robots)}")
     while not (winner := a.get_winner()):
@@ -33,7 +34,7 @@ async def server_task(arena: Arena, event: asyncio.Event) -> None:
     app.router.add_static("/", STATIC_PATH)
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, 'localhost', 8000)
+    site = web.TCPSite(runner, "localhost", 8000)
     await site.start()
     try:
         await asyncio.Future()
@@ -45,6 +46,7 @@ def arena_state_as_json(arena: Arena):
     d = asdict(arena)
     del d["robot_drivers"]
     return d
+
 
 async def watch_handler(request):
     ws = web.WebSocketResponse()
@@ -66,11 +68,11 @@ async def watch_handler(request):
     try:
         async for msg in ws:
             if msg.type == aiohttp.WSMsgType.ERROR:
-                print('ws connection closed with exception %s' % ws.exception())
+                print("ws connection closed with exception %s" % ws.exception())
     finally:
         send_task.cancel()
 
-    print('websocket connection closed')
+    print("websocket connection closed")
 
     return ws
 
@@ -87,6 +89,7 @@ async def amain():
         await runner_task(arena, event)
         await asyncio.sleep(10)
     await server
+
 
 if __name__ == "__main__":
     asyncio.run(amain())
