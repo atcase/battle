@@ -103,7 +103,7 @@ function draw(timestamp) {
     });
 
     arena.missiles.forEach(missile => {
-        const missileScale = SCALE * 50 * missile.energy;
+        const missileScale = SCALE * 50 * (0.01 + 0.99 * missile.energy);
         if (!missile.exploding) {
             const img = shellImage;
             const dx = missile.position.x * 1000;
