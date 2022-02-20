@@ -212,7 +212,7 @@ class Arena:
                 # print(abs(`robot.position - missile.position))
                 if abs(robot.position - missile.position) < robot.radius:
                     if not missile.exploding:
-                        print(f"{robot.name} was hit! {robot.health=} {missile.energy=}")
+                        print(f"{robot.name} was hit! Health={robot.health} Energy={missile.energy}")
                         robot.health -= missile.energy
                         missile.exploding = True
                         robot.got_hit = True
