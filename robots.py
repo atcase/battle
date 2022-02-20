@@ -142,9 +142,10 @@ class Arena:
         elif command.command_type is RobotCommandType.FIRE:
             # Add a bit of randomness to the weapon energy for entertainment
             # This will also help with tie breakers
+            requested_energy = GameParameters.MAX_DAMAGE * min(1.0, max(0.0, command.parameter))
             energy_noise = (random() - 0.5) * GameParameters.WEAPON_RECHARGE_RATE
-            requested_energy = min(GameParameters.MAX_DAMAGE, command.parameter)
             energy = min(robot.weapon_energy, requested_energy) + energy_noise
+            energy = max(0.0, energy)
             angle = (robot.tank_angle + robot.turret_angle) % 360.0
             robot.weapon_energy = max(0, robot.weapon_energy - energy)
             start_position = replace(robot.position)
