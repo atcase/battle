@@ -29,7 +29,7 @@ async def server_task(arena: Arena, event: asyncio.Event) -> None:
     app = web.Application()
     app["arena"] = arena
     app["event"] = event
-    app.router.add_get("/", lambda _: web.FileResponse(INDEX_PATH))
+    app.router.add_get("/", index_handler)
     app.router.add_get("/api/watch", watch_handler)
     app.router.add_static("/", STATIC_PATH)
     runner = web.AppRunner(app)
@@ -46,6 +46,10 @@ def arena_state_as_json(arena: Arena):
     d = asdict(arena)
     del d["robot_drivers"]
     return d
+
+
+async def index_handler(request):
+    return web.FileResponse(INDEX_PATH)
 
 
 async def watch_handler(request):
@@ -83,9 +87,10 @@ async def amain():
     server = asyncio.create_task(server_task(arena, event))
     while True:
         arena.winner = None
-        arena.robots = [Robot("radarbot"), Robot("pongbot")]
+        arena.robots = [Robot("radarbot"), Robot("pongbot"), Robot("stillbot")]
         arena.robot_drivers["radarbot"] = RadarDriver()
         arena.robot_drivers["pongbot"] = PongDriver()
+        arena.robot_drivers["stillbot"] = StillDriver()
         await runner_task(arena, event)
         await asyncio.sleep(10)
     await server

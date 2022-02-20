@@ -1,9 +1,7 @@
 from dataclasses import dataclass, field, replace
 from enum import Enum, auto
-from itertools import product
 from math import atan2, cos, sin, pi, sqrt
 from random import random
-from time import sleep
 from typing import Callable, Dict, List, Optional
 
 
@@ -231,8 +229,10 @@ class Arena:
         # Update radar pings
         for robot in self.robots:
             robot.radar_pinged = False
+            if not robot.live():
+                continue
             for target in self.robots:
-                if robot is target:
+                if robot is target or not target.live():
                     continue
 
                 base_angle = prior_radar_angle[robot.name]
