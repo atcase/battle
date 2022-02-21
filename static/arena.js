@@ -60,10 +60,10 @@ function draw(timestamp) {
     var ctx = document.getElementById('canvas').getContext('2d');
 
     ctx.save();
-    ctx.clearRect(1, 1, 1000, 1000);
+    ctx.clearRect(0, 0, 1000, 1000);
     ctx.strokeStyle = 'black';
     ctx.fillStyle = 'black';
-    ctx.fillRect(1, 1, 1000, 1000);
+    ctx.fillRect(0, 0, 1000, 1000);
     ctx.stroke();
     ctx.restore();
 
