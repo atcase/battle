@@ -1,18 +1,19 @@
 from dataclasses import dataclass, field, replace
 from enum import Enum, auto
 from math import atan2, cos, sin, pi, sqrt
-from random import randint, random
-from typing import Callable, Dict, List, Optional
+from random import randint
+from typing import Dict, List, Optional
 
 
 class GameParameters:
     MAX_VELOCITY = 5
-    MAX_TURN_ANGLE = 45
+    MAX_TURN_ANGLE = 15
     MAX_TURN_RADAR_ANGLE = 180
     MOTOR_POWER = 1
     BULLET_VELOCITY = 20
     FPS = 20
-    MAX_DAMAGE = 10
+    COMMAND_RATE = 2
+    MAX_DAMAGE = 5
     WEAPON_RECHARGE_RATE = 1
     ARENA_WIDTH = 1000
     ARENA_HEIGHT = 1000
@@ -121,9 +122,6 @@ class RobotCommand:
     parameter: int
 
 
-Driver = Callable[[Robot], RobotCommand]
-
-
 @dataclass
 class Arena:
     """The battle arena"""
@@ -131,9 +129,10 @@ class Arena:
     robots: List[Robot] = field(default_factory=list)
     missiles: List[Missile] = field(default_factory=list)
     winner: Optional[str] = None
-    robot_drivers: Dict[str, Driver] = field(default_factory=dict)
 
-    def update_robot(self, robot: Robot, command: RobotCommand) -> None:
+    _prior_radar_angle = {}
+
+    def update_robot_command(self, robot: Robot, command: RobotCommand) -> None:
         """Updates the state of the arena and a single robot based on a command"""
         # print(f"{robot.name} chose to {command.command_type.name}({command.parameter})")
         if command.command_type is RobotCommandType.ACCELERATE:
@@ -146,9 +145,7 @@ class Arena:
             # Add a bit of randomness to the weapon energy for entertainment
             # This will also help with tie breakers
             energy_noise = randint(-1, 1)
-            requested_energy = GameParameters.MAX_DAMAGE * min(
-                100, max(0, command.parameter)
-            )
+            requested_energy = GameParameters.MAX_DAMAGE * min(100, max(0, command.parameter))
             energy = min(robot.weapon_energy, requested_energy) + energy_noise
             energy = int(max(0, energy))
             angle = int((robot.tank_angle + robot.turret_angle) % 360)
@@ -174,10 +171,12 @@ class Arena:
             )
             robot.radar_angle %= 360
 
+    def update_robot_state(self, robot: Robot) -> None:
         # Update robot position
         robot.position.x += int(robot.velocity * cos(robot.tank_angle / 180 * pi))
         robot.position.y += int(robot.velocity * sin(robot.tank_angle / 180 * pi))
-        robot.bumped_wall = robot.position.clip(margin=robot.radius)
+        if robot.position.clip(margin=robot.radius):
+            robot.bumped_wall = True
 
         # Recharge weapon
         robot.weapon_energy += GameParameters.WEAPON_RECHARGE_RATE
@@ -193,20 +192,62 @@ class Arena:
             missile.position.y += int(v * sin(missile.angle / 180 * pi))
             missile.position.clip()
 
+    def reset_flags(self):
+        for robot in self.robots:
+            if not robot.live():
+                continue
+            robot.got_hit = False
+            if robot.radar_pinged:
+                print(f"Clearing ping: {robot}")
+            robot.radar_pinged = False
+            robot.bumped_wall = False
+
+    def update_radars(self) -> None:
+        for robot in self.robots:
+            if not robot.live():
+                continue
+
+            # Update radar pings
+            for target in self.robots:
+                if robot is target or not target.live():
+                    continue
+
+                base_angle = self._prior_radar_angle.get(robot.name, 0.0)
+                target_angle = ((target.position - robot.position).angle() - base_angle + 180.0) % 360.0 - 180.0
+                now_angle = (
+                    robot.tank_angle + robot.turret_angle + robot.radar_angle - base_angle + 180.0
+                ) % 360.0 - 180.0
+                if (
+                    now_angle > 0
+                    and target_angle > 0
+                    and now_angle > target_angle
+                    or now_angle < 0
+                    and target_angle < 0
+                    and now_angle < target_angle
+                ):
+                    robot.radar_pinged = True
+                    break
+
+            # Save prior radar state for next calculation
+            self._prior_radar_angle[robot.name] = robot.tank_angle + robot.turret_angle + robot.radar_angle
+
+    def update_commands(self, commands: Dict[str, RobotCommand]) -> None:
+        for robot in self.robots:
+            if not robot.live():
+                continue
+
+            command = commands[robot.name]
+            self.update_robot_command(robot, command)
+
     def update_arena(self) -> None:
         """Updates the state of the arena (all robots & missiles)"""
-        # Save prior radar state
-        prior_radar_angle = {
-            r.name: r.tank_angle + r.turret_angle + r.radar_angle for r in self.robots
-        }
 
         # Update all robots
         for robot in self.robots:
             if not robot.live():
                 robot.velocity = 0
                 continue
-            command = self.robot_drivers[robot.name](robot)
-            self.update_robot(robot, command)
+            self.update_robot_state(robot)
 
         # Update all missiles
         for missile in self.missiles:
@@ -214,8 +255,6 @@ class Arena:
         self.missiles = [m for m in self.missiles if m.live()]
 
         # Missile - Robot collision detection
-        for robot in self.robots:
-            robot.got_hit = False
         for missile in self.missiles:
             for robot in self.robots:
                 if not robot.live():
@@ -223,9 +262,7 @@ class Arena:
                 # print(abs(`robot.position - missile.position))
                 if abs(robot.position - missile.position) < robot.radius:
                     if not missile.exploding:
-                        print(
-                            f"{robot.name} was hit! Health={robot.health} Energy={missile.energy}"
-                        )
+                        print(f"{robot.name} was hit! Health={robot.health} Energy={missile.energy}")
                         robot.health -= missile.energy
                         missile.exploding = True
                         robot.got_hit = True
@@ -240,35 +277,7 @@ class Arena:
                 missile.exploding = True
 
         # Update radar pings
-        for robot in self.robots:
-            robot.radar_pinged = False
-            if not robot.live():
-                continue
-            for target in self.robots:
-                if robot is target or not target.live():
-                    continue
-
-                base_angle = prior_radar_angle[robot.name]
-                target_angle = (
-                    (target.position - robot.position).angle() - base_angle + 180.0
-                ) % 360.0 - 180.0
-                now_angle = (
-                    robot.tank_angle
-                    + robot.turret_angle
-                    + robot.radar_angle
-                    - base_angle
-                    + 180.0
-                ) % 360.0 - 180.0
-                if (
-                    now_angle > 0
-                    and target_angle > 0
-                    and now_angle > target_angle
-                    or now_angle < 0
-                    and target_angle < 0
-                    and now_angle < target_angle
-                ):
-                    robot.radar_pinged = True
-                    break
+        self.update_radars()
 
     def get_winner(self) -> Optional[Robot]:
         """Returns the winner or None if no winner yet"""

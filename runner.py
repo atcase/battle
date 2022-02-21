@@ -1,12 +1,14 @@
 import asyncio
 from dataclasses import asdict
+import json
 from pathlib import Path
+from typing import Callable, Dict
 import aiohttp
 from aiohttp import web
 import aiohttp_jinja2
 import jinja2
 
-from robots import Arena, Robot, GameParameters
+from robots import Arena, Robot, GameParameters, RobotCommand, RobotCommandType
 from example_drivers import PongDriver, RadarDriver, StillDriver
 
 
@@ -14,11 +16,27 @@ TEMPLATE_PATH = Path(__file__).parent / "templates"
 STATIC_PATH = Path(__file__).parent / "static"
 
 
-async def runner_task(a: Arena, event: asyncio.Event) -> None:
+Driver = Callable[[Robot], RobotCommand]
+
+
+async def runner_task(a: Arena, drivers: Dict[str, Driver], event: asyncio.Event) -> None:
     print(f"Starting battle with: {', '.join(r.name for r in a.robots)}")
     turns = 0
+    standing_orders = {r.name: RobotCommand(RobotCommandType.IDLE, 0) for r in a.robots}
     while not a.get_winner() and turns < 6000:
         turns += 1
+        if turns % GameParameters.COMMAND_RATE == 0:
+            # Get new commands for each robot
+            standing_orders = {r.name: drivers[r.name](r) for r in a.robots}
+            # Process the commands
+            a.update_commands(standing_orders)
+            # Retain all commands from the driver as standing orders, except for FIRE which only occurs once
+            a.reset_flags()
+            for name, command in standing_orders.items():
+                if command.command_type is RobotCommandType.FIRE:
+                    command.command_type = RobotCommandType.IDLE
+        else:
+            a.update_commands(standing_orders)
         a.update_arena()
         event.set()
         event.clear()
@@ -53,7 +71,6 @@ async def server_task(arena: Arena, event: asyncio.Event) -> None:
 
 def arena_state_as_json(arena: Arena):
     d = asdict(arena)
-    del d["robot_drivers"]
     return d
 
 
@@ -73,7 +90,8 @@ async def watch_handler(request):
                     await asyncio.wait_for(request.app["event"].wait(), 1.0)
                 except asyncio.TimeoutError:
                     pass
-                await ws.send_json(arena_state_as_json(request.app["arena"]))
+                msg = arena_state_as_json(request.app["arena"])
+                await ws.send_str(json.dumps(msg, separators=(",", ":")))
         except Exception as e:
             print(f"Exception: {e!r}")
         finally:
@@ -98,11 +116,13 @@ async def amain():
     server = asyncio.create_task(server_task(arena, event))
     while True:
         arena.winner = None
-        arena.robots = [Robot("radarbot"), Robot("pongbot"), Robot("stillbot")]
-        arena.robot_drivers["radarbot"] = RadarDriver()
-        arena.robot_drivers["pongbot"] = PongDriver()
-        arena.robot_drivers["stillbot"] = StillDriver()
-        await runner_task(arena, event)
+        drivers = {
+            "radarbot": RadarDriver(),
+            "pongbot": PongDriver(),
+            "stillbot": StillDriver(),
+        }
+        arena.robots = [Robot(k) for k in drivers]
+        await runner_task(arena, drivers, event)
         await asyncio.sleep(10)
     await server
 
