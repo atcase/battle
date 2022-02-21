@@ -3,13 +3,15 @@ from dataclasses import asdict
 from pathlib import Path
 import aiohttp
 from aiohttp import web
+import aiohttp_jinja2
+import jinja2
 
 from robots import Arena, Robot, GameParameters
 from example_drivers import PongDriver, RadarDriver, StillDriver
 
 
-STATIC_PATH = Path(__file__).parent / "site"
-INDEX_PATH = STATIC_PATH / "index.html"
+TEMPLATE_PATH = Path(__file__).parent / "templates"
+STATIC_PATH = Path(__file__).parent / "static"
 
 
 async def runner_task(a: Arena, event: asyncio.Event) -> None:
@@ -32,11 +34,13 @@ async def runner_task(a: Arena, event: asyncio.Event) -> None:
 
 async def server_task(arena: Arena, event: asyncio.Event) -> None:
     app = web.Application()
+    aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(TEMPLATE_PATH))
+
     app["arena"] = arena
     app["event"] = event
     app.router.add_get("/", index_handler)
     app.router.add_get("/api/watch", watch_handler)
-    app.router.add_static("/", STATIC_PATH)
+    app.router.add_static("/", STATIC_PATH, name="static", append_version=True)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", 8000)
@@ -53,8 +57,9 @@ def arena_state_as_json(arena: Arena):
     return d
 
 
+@aiohttp_jinja2.template("index.html.j2")
 async def index_handler(request):
-    return web.FileResponse(INDEX_PATH)
+    return {}
 
 
 async def watch_handler(request):

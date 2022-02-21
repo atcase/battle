@@ -29,8 +29,6 @@ function openSocket() {
     };
 }
 
-openSocket();
-
 window.onload = function () {
     explosionImages = [
         document.getElementById("explosion0"),
@@ -50,6 +48,7 @@ window.onload = function () {
         document.getElementById("track1A"),
         document.getElementById("track1B")
     ];
+    openSocket();
 }
 
 function draw(timestamp) {
