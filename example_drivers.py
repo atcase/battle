@@ -30,14 +30,14 @@ class PongDriver:
 
         if r.radar_pinged:
             return RobotCommand(RobotCommandType.FIRE, 100)
-        return RobotCommand(RobotCommandType.TURN_TURRET, 3)
+        return RobotCommand(RobotCommandType.TURN_TURRET, 2)
 
 
 @dataclass
 class RadarDriver:
     """Stationary driver with a radar search mechanism that improves locking on to targets."""
 
-    turret_dir: int = 5
+    turret_dir: int = 3
 
     def __call__(self, r: Robot) -> RobotCommand:
         if r.radar_pinged:
