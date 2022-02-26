@@ -70,24 +70,23 @@ async def server_task(arena: Arena, event: asyncio.Event) -> None:
 
 
 class JSONEncoder(json.JSONEncoder):
-    """Reduces resolution of floats and strips False/None values"""
+    """Minimizes JSON string length by reducing resolution of floats, convert bool to int, and transpose"""
 
     def encode(self, a) -> str:
+        if isinstance(a, bool):
+            return super().encode(1 if a else 0)
         if isinstance(a, float):
             return f"{round(a,1):g}"
         if isinstance(a, dict):
-            items = (f'"{k}"{self.key_separator}{self.encode(v)}' for k, v in a.items() if self._include(v))
+            items = (f'"{k}"{self.key_separator}{self.encode(v)}' for k, v in a.items())
             return f"{{{self.item_separator.join(items)}}}"
         if isinstance(a, (list, tuple)):
+            if len(a) and isinstance(a[0], dict):
+                transposed = {k: [e[k] for e in a] for k in a[0].keys()}
+                transposed["_t"] = True
+                return self.encode(transposed)
             return f"[{self.item_separator.join(self.encode(x) for x in a)}]"
         return super().encode(a)
-
-    def _include(self, v):
-        if isinstance(v, bool):
-            return v
-        if v is None:
-            return False
-        return True
 
 
 def arena_state_as_json(arena: Arena):
@@ -113,6 +112,7 @@ async def watch_handler(request):
                     pass
                 payload = arena_state_as_json(request.app["arena"])
                 msg = json.dumps(payload, separators=(",", ":"), cls=JSONEncoder)
+                # print(msg)
                 await ws.send_str(msg)
         except Exception as e:
             print(f"Exception: {e!r}")
