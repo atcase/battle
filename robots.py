@@ -17,7 +17,8 @@ class GameParameters:
     WEAPON_RECHARGE_RATE = 0.2
     ARENA_WIDTH = 1000
     ARENA_HEIGHT = 1000
-    EXPLODE_FRAMES = 8
+    EXPLODE_FRAMES = 6
+    FIRING_FRAMES = 6
 
 
 def random_angle() -> float:
@@ -76,16 +77,16 @@ class Robot:
     name: str
     position: Position = field(default_factory=Position.random)
     velocity: float = 0.0
-    tank_angle: float = field(default_factory=random_angle)
+    hull_angle: float = field(default_factory=random_angle)
     turret_angle: float = 0
     radar_angle: float = 0
     health: float = 100.0
-    weapon_energy: float = 100.0
+    weapon_energy: float = 5.0
     radius: int = 20
     radar_ping: Optional[float] = None
     got_hit: bool = False
     bumped_wall: bool = False
-    fired: bool = False
+    firing_progress: Optional[int] = None
 
     def live(self) -> bool:
         """Returns whether robot is still alive"""
@@ -111,7 +112,7 @@ class RobotCommandType(Enum):
     ACCELERATE = auto()
     DECELERATE = auto()
     FIRE = auto()
-    TURN_TANK = auto()
+    TURN_HULL = auto()
     TURN_TURRET = auto()
     TURN_RADAR = auto()
     IDLE = auto()
@@ -137,7 +138,6 @@ class Arena:
     def update_robot_command(self, robot: Robot, command: RobotCommand) -> None:
         """Updates the state of the arena and a single robot based on a command"""
         # print(f"{robot.name} chose to {command.command_type.name}({command.parameter})")
-        robot.fired = False
         if command.command_type is RobotCommandType.ACCELERATE:
             robot.velocity += GameParameters.MOTOR_POWER / GameParameters.COMMAND_RATE
             robot.velocity = min(GameParameters.MAX_VELOCITY, robot.velocity)
@@ -151,20 +151,21 @@ class Arena:
             requested_energy = min(GameParameters.MAX_DAMAGE, max(0, command.parameter))
             energy = min(robot.weapon_energy, requested_energy) + energy_noise
             energy = max(0, energy)
-            angle = (robot.tank_angle + robot.turret_angle) % 360
+            angle = (robot.hull_angle + robot.turret_angle) % 360
             robot.weapon_energy = max(0, robot.weapon_energy - energy)
             start_position = replace(robot.position)
-            start_position.x += 2 * robot.radius * cos(angle / 180 * pi)
-            start_position.y += 2 * robot.radius * sin(angle / 180 * pi)
+            start_position.x += 1.01 * robot.radius * cos(angle / 180 * pi)
+            start_position.y += 1.01 * robot.radius * sin(angle / 180 * pi)
             m = Missile(start_position, angle, energy)
             self.missiles.append(m)
-            robot.fired = True
-        elif command.command_type is RobotCommandType.TURN_TANK:
-            robot.tank_angle += min(
+            if robot.firing_progress is None:
+                robot.firing_progress = 0
+        elif command.command_type is RobotCommandType.TURN_HULL:
+            robot.hull_angle += min(
                 GameParameters.MAX_TURN_ANGLE,
                 max(-GameParameters.MAX_TURN_ANGLE, command.parameter / GameParameters.COMMAND_RATE),
             )
-            robot.tank_angle %= 360
+            robot.hull_angle %= 360
         elif command.command_type is RobotCommandType.TURN_TURRET:
             robot.turret_angle += command.parameter / GameParameters.COMMAND_RATE
             robot.turret_angle %= 360
@@ -177,14 +178,20 @@ class Arena:
 
     def update_robot_state(self, robot: Robot) -> None:
         # Update robot position
-        robot.position.x += (robot.velocity / GameParameters.COMMAND_RATE) * cos(robot.tank_angle / 180 * pi)
-        robot.position.y += (robot.velocity / GameParameters.COMMAND_RATE) * sin(robot.tank_angle / 180 * pi)
+        robot.position.x += (robot.velocity / GameParameters.COMMAND_RATE) * cos(robot.hull_angle / 180 * pi)
+        robot.position.y += (robot.velocity / GameParameters.COMMAND_RATE) * sin(robot.hull_angle / 180 * pi)
         if robot.position.clip(margin=robot.radius):
             robot.bumped_wall = True
 
         # Recharge weapon
         robot.weapon_energy += GameParameters.WEAPON_RECHARGE_RATE / GameParameters.COMMAND_RATE
         robot.weapon_energy = min(GameParameters.MAX_DAMAGE, robot.weapon_energy)
+
+        # Manage turret firing progress for animations
+        if robot.firing_progress is not None:
+            robot.firing_progress += 1
+            if robot.firing_progress >= GameParameters.FIRING_FRAMES:
+                robot.firing_progress = None
 
     def update_missile(self, missile: Missile) -> None:
         """Updates the state of a single missile"""
@@ -217,7 +224,7 @@ class Arena:
                 base_angle = self._prior_radar_angle.get(robot.name, 0.0)
                 target_angle = ((target.position - robot.position).angle() - base_angle + 180.0) % 360.0 - 180.0
                 now_angle = (
-                    robot.tank_angle + robot.turret_angle + robot.radar_angle - base_angle + 180.0
+                    robot.hull_angle + robot.turret_angle + robot.radar_angle - base_angle + 180.0
                 ) % 360.0 - 180.0
                 if (
                     now_angle > 0
@@ -231,7 +238,7 @@ class Arena:
                     break
 
             # Save prior radar state for next calculation
-            self._prior_radar_angle[robot.name] = robot.tank_angle + robot.turret_angle + robot.radar_angle
+            self._prior_radar_angle[robot.name] = robot.hull_angle + robot.turret_angle + robot.radar_angle
 
     def update_commands(self, commands: Dict[str, RobotCommand]) -> None:
         for robot in self.robots:
