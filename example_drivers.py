@@ -8,7 +8,7 @@ class StillDriver:
 
     pinged: bool = False
 
-    def __call__(self, r: Robot) -> RobotCommand:
+    def get_next_command(self, r: Robot) -> RobotCommand:
         if r.radar_pinged or self.pinged:
             self.pinged = True
             return RobotCommand(RobotCommandType.FIRE, 100)
@@ -21,7 +21,7 @@ class PongDriver:
 
     accelerate_countdown: int = 3
 
-    def __call__(self, r: Robot) -> RobotCommand:
+    def get_next_command(self, r: Robot) -> RobotCommand:
         if self.accelerate_countdown:
             self.accelerate_countdown -= 1
             return RobotCommand(RobotCommandType.ACCELERATE, 0)
@@ -39,7 +39,7 @@ class RadarDriver:
 
     turret_dir: int = 5
 
-    def __call__(self, r: Robot) -> RobotCommand:
+    def get_next_command(self, r: Robot) -> RobotCommand:
         if r.radar_pinged:
             self.turret_dir = -self.turret_dir
             return RobotCommand(RobotCommandType.FIRE, 100)

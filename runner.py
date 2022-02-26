@@ -132,9 +132,9 @@ async def amain():
     while True:
         arena.winner = None
         drivers = {
-            "radarbot": RadarDriver(),
-            "pongbot": PongDriver(),
-            "stillbot": StillDriver(),
+            "radarbot": RadarDriver().get_next_command,
+            "pongbot": PongDriver().get_next_command,
+            "stillbot": StillDriver().get_next_command,
         }
         arena.robots = [Robot(k) for k in drivers]
         await runner_task(arena, drivers, event)
