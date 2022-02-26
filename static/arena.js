@@ -5,6 +5,7 @@ var laserImage = null;
 var hullImage = null;
 var turretImage = null;
 var galaxyImage = null;
+var exhaustImages = null;
 var arena = null;
 var lastUpdate = null;
 var webSocket = null;
@@ -53,6 +54,14 @@ window.onload = function () {
     explosionImage = document.getElementById("explosion");
     galaxyImage = document.getElementById("galaxy");
     backgroundImage = document.getElementById("background");
+    exhaustImages = [
+        document.getElementById("exhaust0"),
+        document.getElementById("exhaust1"),
+        document.getElementById("exhaust0"),
+        document.getElementById("exhaust1"),
+        document.getElementById("exhaust0"),
+        document.getElementById("exhaust1")
+    ];
     openSocket();
     for (var i=0; i<2000; i++) {
         stars.push(randomStar());
@@ -81,15 +90,15 @@ function draw(timestamp) {
     ctx.globalAlpha = 0.3;
     ctx.drawImage(backgroundImage, 0, 0, backgroundImage.width / 2, backgroundImage.height / 2, 0, 0, 1000, 1000);
     ctx.restore();
-    
+
     ctx.save();
     ctx.translate(500, 500);
-    
+
     ctx.save();
     ctx.scale(0.05, 0.05);
     ctx.drawImage(galaxyImage, -galaxyImage.width / 2, -galaxyImage.height / 2);
     ctx.restore();
-    
+
     ctx.fillStyle = `white`;
     stars.forEach(star => {
         const size = (2 - star.z/10)/1000;
@@ -102,7 +111,7 @@ function draw(timestamp) {
     });
     stars = stars.map((s) => s.z > 0 ? s : randomStar())
     ctx.restore();
-    
+
     arenaT.robots.forEach(robot => {
         const img = hullImage;
         const dx = robot.position.x;
@@ -127,7 +136,11 @@ function draw(timestamp) {
         // Draw the hull
         ctx.rotate(Math.PI / 2 + robot.hull_angle / 180 * Math.PI);
         ctx.drawImage(img, -img.width / 2, -img.height / 2);
-        
+        if (robot.accelerate_progress) {
+            const exhaustImg = exhaustImages[robot.accelerate_progress];
+            ctx.drawImage(exhaustImg, -exhaustImg.width / 2, img.height / 2 - exhaustImg.height / 2);
+        }
+
         // Draw the turret
         const imgDim = turretImage.height;
         const idx = robot.firing_progress || 0;

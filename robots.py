@@ -19,6 +19,7 @@ class GameParameters:
     ARENA_HEIGHT = 1000
     EXPLODE_FRAMES = 6
     FIRING_FRAMES = 6
+    EXHAUST_FRAMES = 6
 
 
 def random_angle() -> float:
@@ -87,6 +88,7 @@ class Robot:
     got_hit: bool = False
     bumped_wall: bool = False
     firing_progress: Optional[int] = None
+    accelerate_progress: Optional[int] = None
 
     def live(self) -> bool:
         """Returns whether robot is still alive"""
@@ -110,7 +112,6 @@ class Missile:
 
 class RobotCommandType(Enum):
     ACCELERATE = auto()
-    DECELERATE = auto()
     FIRE = auto()
     TURN_HULL = auto()
     TURN_TURRET = auto()
@@ -141,9 +142,8 @@ class Arena:
         if command.command_type is RobotCommandType.ACCELERATE:
             robot.velocity += GameParameters.MOTOR_POWER / GameParameters.COMMAND_RATE
             robot.velocity = min(GameParameters.MAX_VELOCITY, robot.velocity)
-        elif command.command_type is RobotCommandType.DECELERATE:
-            robot.velocity -= GameParameters.MOTOR_POWER / GameParameters.COMMAND_RATE
-            robot.velocity = max(-GameParameters.MAX_VELOCITY, robot.velocity)
+            if robot.accelerate_progress is None:
+                robot.accelerate_progress = 0
         elif command.command_type is RobotCommandType.FIRE:
             # Add a bit of randomness to the weapon energy for entertainment
             # This will also help with tie breakers
@@ -166,6 +166,8 @@ class Arena:
                 max(-GameParameters.MAX_TURN_ANGLE, command.parameter / GameParameters.COMMAND_RATE),
             )
             robot.hull_angle %= 360
+            if robot.accelerate_progress is None:
+                robot.accelerate_progress = 0
         elif command.command_type is RobotCommandType.TURN_TURRET:
             robot.turret_angle += command.parameter / GameParameters.COMMAND_RATE
             robot.turret_angle %= 360
@@ -192,6 +194,13 @@ class Arena:
             robot.firing_progress += 1
             if robot.firing_progress >= GameParameters.FIRING_FRAMES:
                 robot.firing_progress = None
+
+        # Manage exhaust progress for animations
+        if robot.accelerate_progress is not None:
+            robot.accelerate_progress += 1
+            if robot.accelerate_progress >= GameParameters.EXHAUST_FRAMES:
+                robot.accelerate_progress = None
+
 
     def update_missile(self, missile: Missile) -> None:
         """Updates the state of a single missile"""
