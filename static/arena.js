@@ -131,7 +131,6 @@ function draw(timestamp) {
         // Draw the turret
         const imgDim = turretImage.height;
         const idx = robot.firing_progress || 0;
-        console.log(idx)
         ctx.rotate(robot.turret_angle / 180 * Math.PI);
         ctx.drawImage(turretImage, imgDim*idx, 0, imgDim, imgDim, -imgDim / 2, -imgDim / 2, imgDim, imgDim);
         // ctx.drawImage(turretImage, -turretImage.width / 2, -turretImage.height / 2);

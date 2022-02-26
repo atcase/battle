@@ -261,7 +261,6 @@ class Arena:
         # Update all missiles
         for missile in self.missiles:
             self.update_missile(missile)
-        self.missiles = [m for m in self.missiles if m.live()]
 
         # Missile - Robot collision detection
         for missile in self.missiles:
@@ -284,6 +283,9 @@ class Arena:
             ):
                 # print(f"Missile hit edge: {missile.position}")
                 missile.exploding = True
+                missile.explode_progress = GameParameters.EXPLODE_FRAMES
+
+        self.missiles = [m for m in self.missiles if m.live()]
 
         # Update radar pings
         self.update_radars()
