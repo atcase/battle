@@ -82,7 +82,7 @@ class Robot:
     health: float = 100.0
     weapon_energy: float = 100.0
     radius: int = 20
-    radar_pinged: bool = False
+    radar_ping: Optional[float] = None
     got_hit: bool = False
     bumped_wall: bool = False
     fired: bool = False
@@ -201,7 +201,7 @@ class Arena:
             if not robot.live():
                 continue
             robot.got_hit = False
-            robot.radar_pinged = False
+            robot.radar_ping = None
             robot.bumped_wall = False
 
     def update_radars(self) -> None:
@@ -227,7 +227,7 @@ class Arena:
                     and target_angle < 0
                     and now_angle < target_angle
                 ):
-                    robot.radar_pinged = True
+                    robot.radar_ping = abs(target.position - robot.position)
                     break
 
             # Save prior radar state for next calculation

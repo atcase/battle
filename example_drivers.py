@@ -9,7 +9,7 @@ class StillDriver:
     pinged: bool = False
 
     def get_next_command(self, r: Robot) -> RobotCommand:
-        if r.radar_pinged or self.pinged:
+        if r.radar_ping is not None or self.pinged:
             self.pinged = True
             return RobotCommand(RobotCommandType.FIRE, 100)
         return RobotCommand(RobotCommandType.TURN_TURRET, 5)
@@ -28,7 +28,7 @@ class PongDriver:
         if r.bumped_wall:
             return RobotCommand(RobotCommandType.TURN_TANK, -45)
 
-        if r.radar_pinged:
+        if r.radar_ping is not None:
             return RobotCommand(RobotCommandType.FIRE, 100)
         return RobotCommand(RobotCommandType.TURN_TURRET, 2)
 
@@ -37,17 +37,17 @@ class PongDriver:
 class RadarDriver:
     """Stationary driver with a radar search mechanism that improves locking on to targets."""
 
-    turret_dir: int = 90
+    turret_dir: float = 90.0
     radar_pinged_last_time: bool = False
 
     def get_next_command(self, r: Robot) -> RobotCommand:
-        if r.radar_pinged:
+        if r.radar_ping is not None:
             if r.weapon_energy >= 3 and abs(self.turret_dir) < 5:
                 return RobotCommand(RobotCommandType.FIRE, 100)
             self.turret_dir = -self.turret_dir / 2
         elif not self.radar_pinged_last_time:
             self.turret_dir = -self.turret_dir * 2
 
-        self.radar_pinged_last_time = r.radar_pinged
+        self.radar_pinged_last_time = r.radar_ping is not None
         self.turret_dir = max(-15, min(90, self.turret_dir))
         return RobotCommand(RobotCommandType.TURN_TURRET, self.turret_dir)
