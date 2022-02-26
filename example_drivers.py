@@ -12,7 +12,7 @@ class StillDriver:
         if r.radar_pinged or self.pinged:
             self.pinged = True
             return RobotCommand(RobotCommandType.FIRE, 100)
-        return RobotCommand(RobotCommandType.TURN_TURRET, 1)
+        return RobotCommand(RobotCommandType.TURN_TURRET, 5)
 
 
 @dataclass
@@ -37,7 +37,7 @@ class PongDriver:
 class RadarDriver:
     """Stationary driver with a radar search mechanism that improves locking on to targets."""
 
-    turret_dir: int = 3
+    turret_dir: int = 5
 
     def __call__(self, r: Robot) -> RobotCommand:
         if r.radar_pinged:

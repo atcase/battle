@@ -32,7 +32,7 @@ async def runner_task(a: Arena, drivers: Dict[str, Driver], event: asyncio.Event
             a.update_commands(standing_orders)
             # Retain all commands from the driver as standing orders, except for FIRE which only occurs once
             a.reset_flags()
-            for name, command in standing_orders.items():
+            for command in standing_orders.values():
                 if command.command_type is RobotCommandType.FIRE:
                     command.command_type = RobotCommandType.IDLE
         else:
@@ -69,6 +69,20 @@ async def server_task(arena: Arena, event: asyncio.Event) -> None:
         await runner.cleanup()
 
 
+class JSONEncoder(json.JSONEncoder):
+    """Reduces resolution of floats"""
+
+    def encode(self, a) -> str:
+        if isinstance(a, float):
+            return f"{round(a,1):g}"
+        if isinstance(a, dict):
+            items = (f'"{k}"{self.key_separator}{self.encode(v)}' for k, v in a.items())
+            return f"{{{self.item_separator.join(items)}}}"
+        if isinstance(a, (list, tuple)):
+            return f"[{self.item_separator.join(self.encode(x) for x in a)}]"
+        return super().encode(a)
+
+
 def arena_state_as_json(arena: Arena):
     d = asdict(arena)
     return d
@@ -90,8 +104,9 @@ async def watch_handler(request):
                     await asyncio.wait_for(request.app["event"].wait(), 1.0)
                 except asyncio.TimeoutError:
                     pass
-                msg = arena_state_as_json(request.app["arena"])
-                await ws.send_str(json.dumps(msg, separators=(",", ":")))
+                payload = arena_state_as_json(request.app["arena"])
+                msg = json.dumps(payload, separators=(",", ":"), cls=JSONEncoder)
+                await ws.send_str(msg)
         except Exception as e:
             print(f"Exception: {e!r}")
         finally:

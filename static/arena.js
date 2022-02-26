@@ -71,7 +71,7 @@ function draw(timestamp) {
         const img = hullImage;
         const dx = robot.position.x;
         const dy = robot.position.y;
-        const trackImgIndex = Math.round(timestamp * 5 * robot.velocity) % 2;
+        const trackImgIndex = Math.round(timestamp * 3 * robot.velocity) % 2;
 
         ctx.save();
         ctx.translate(dx, dy);
@@ -84,20 +84,24 @@ function draw(timestamp) {
         ctx.textAlign = 'center';
         ctx.fillText(`${robot.name} (${robot.health}%)`, 0, labely);
 
-        // Draw the tank
+        // Draw the tracks+tank
+        var trackImage = trackImages[trackImgIndex];
         ctx.rotate(Math.PI / 2 + robot.tank_angle / 180 * Math.PI);
+        ctx.drawImage(trackImage, -img.width * 0.38, -trackImage.height / 2);
+        ctx.drawImage(trackImage, +img.width * 0.38 - trackImage.width, -trackImage.height / 2);
         ctx.drawImage(img, -img.width / 2, -img.height / 2);
 
-        // Draw the tracks
-        var trackImage = trackImages[trackImgIndex];
-        ctx.drawImage(trackImage, -img.width * 0.3, -trackImage.height / 2);
-        ctx.drawImage(trackImage, +img.width * 0.3 - trackImage.width, -trackImage.height / 2);
+        ctx.restore();
+    });
 
-        // Draw the turret and barrel
-        ctx.rotate(robot.turret_angle / 180 * Math.PI);
+    // Draw turrets and barrels on top of neighbouring robots
+    arena.robots.forEach(robot => {
+        ctx.save();
+        ctx.translate(robot.position.x, robot.position.y);
+        ctx.scale(SCALE, SCALE);
+        ctx.rotate(Math.PI / 2 + (robot.tank_angle + robot.turret_angle) / 180 * Math.PI);
         ctx.drawImage(turretImage, -turretImage.width / 2, -turretImage.height / 2);
         ctx.drawImage(barrelImage, -barrelImage.width / 2, -barrelImage.height / 2 - turretImage.height);
-
         ctx.restore();
     });
 
