@@ -70,17 +70,24 @@ async def server_task(arena: Arena, event: asyncio.Event) -> None:
 
 
 class JSONEncoder(json.JSONEncoder):
-    """Reduces resolution of floats"""
+    """Reduces resolution of floats and strips False/None values"""
 
     def encode(self, a) -> str:
         if isinstance(a, float):
             return f"{round(a,1):g}"
         if isinstance(a, dict):
-            items = (f'"{k}"{self.key_separator}{self.encode(v)}' for k, v in a.items())
+            items = (f'"{k}"{self.key_separator}{self.encode(v)}' for k, v in a.items() if self._include(v))
             return f"{{{self.item_separator.join(items)}}}"
         if isinstance(a, (list, tuple)):
             return f"[{self.item_separator.join(self.encode(x) for x in a)}]"
         return super().encode(a)
+
+    def _include(self, v):
+        if isinstance(v, bool):
+            return v
+        if v is None:
+            return False
+        return True
 
 
 def arena_state_as_json(arena: Arena):

@@ -100,6 +100,9 @@ function draw(timestamp) {
         ctx.translate(robot.position.x, robot.position.y);
         ctx.scale(SCALE, SCALE);
         ctx.rotate(Math.PI / 2 + (robot.tank_angle + robot.turret_angle) / 180 * Math.PI);
+        if (robot.fired) {
+            ctx.translate(0, -4);
+        }
         ctx.drawImage(turretImage, -turretImage.width / 2, -turretImage.height / 2);
         ctx.drawImage(barrelImage, -barrelImage.width / 2, -barrelImage.height / 2 - turretImage.height);
         ctx.restore();

@@ -85,6 +85,7 @@ class Robot:
     radar_pinged: bool = False
     got_hit: bool = False
     bumped_wall: bool = False
+    fired: bool = False
 
     def live(self) -> bool:
         """Returns whether robot is still alive"""
@@ -136,6 +137,7 @@ class Arena:
     def update_robot_command(self, robot: Robot, command: RobotCommand) -> None:
         """Updates the state of the arena and a single robot based on a command"""
         # print(f"{robot.name} chose to {command.command_type.name}({command.parameter})")
+        robot.fired = False
         if command.command_type is RobotCommandType.ACCELERATE:
             robot.velocity += GameParameters.MOTOR_POWER / GameParameters.COMMAND_RATE
             robot.velocity = min(GameParameters.MAX_VELOCITY, robot.velocity)
@@ -156,6 +158,7 @@ class Arena:
             start_position.y += 2 * robot.radius * sin(angle / 180 * pi)
             m = Missile(start_position, angle, energy)
             self.missiles.append(m)
+            robot.fired = True
         elif command.command_type is RobotCommandType.TURN_TANK:
             robot.tank_angle += min(
                 GameParameters.MAX_TURN_ANGLE,
