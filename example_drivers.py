@@ -37,10 +37,17 @@ class PongDriver:
 class RadarDriver:
     """Stationary driver with a radar search mechanism that improves locking on to targets."""
 
-    turret_dir: int = 5
+    turret_dir: int = 90
+    radar_pinged_last_time: bool = False
 
     def get_next_command(self, r: Robot) -> RobotCommand:
         if r.radar_pinged:
-            self.turret_dir = -self.turret_dir
-            return RobotCommand(RobotCommandType.FIRE, 100)
+            if r.weapon_energy >= 3 and abs(self.turret_dir) < 5:
+                return RobotCommand(RobotCommandType.FIRE, 100)
+            self.turret_dir = -self.turret_dir / 2
+        elif not self.radar_pinged_last_time:
+            self.turret_dir = -self.turret_dir * 2
+
+        self.radar_pinged_last_time = r.radar_pinged
+        self.turret_dir = max(-15, min(90, self.turret_dir))
         return RobotCommand(RobotCommandType.TURN_TURRET, self.turret_dir)
