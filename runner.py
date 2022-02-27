@@ -136,6 +136,7 @@ async def amain():
     event = asyncio.Event()
     server = asyncio.create_task(server_task(arena, event))
     while True:
+        arena.remaining = 6000
         arena.winner = None
         drivers = {
             "radarbot": RadarDriver().get_next_command,
