@@ -21,11 +21,10 @@ Driver = Callable[[Robot], RobotCommand]
 
 async def runner_task(a: Arena, drivers: Dict[str, Driver], event: asyncio.Event) -> None:
     print(f"Starting battle with: {', '.join(r.name for r in a.robots)}")
-    turns = 0
     standing_orders = {r.name: RobotCommand(RobotCommandType.IDLE, 0) for r in a.robots}
-    while not a.get_winner() and turns < 6000:
-        turns += 1
-        if turns % GameParameters.COMMAND_RATE == 0:
+    while not a.get_winner() and a.remaining > 0:
+        a.remaining -= 1
+        if a.remaining % GameParameters.COMMAND_RATE == 0:
             # Get new commands for each robot
             standing_orders = {r.name: drivers[r.name](r) for r in a.robots}
             # Process the commands

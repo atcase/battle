@@ -78,6 +78,7 @@ class Robot:
     name: str
     position: Position = field(default_factory=Position.random)
     velocity: float = 0.0
+    velocity_angle: float = 0
     hull_angle: float = field(default_factory=random_angle)
     turret_angle: float = 0
     radar_angle: float = 0
@@ -132,6 +133,7 @@ class Arena:
     robots: List[Robot] = field(default_factory=list)
     missiles: List[Missile] = field(default_factory=list)
     winner: Optional[str] = None
+    remaining: int = 6000
 
     def __post_init__(self):
         self._prior_radar_angle: Dict[str, float] = {}
@@ -140,7 +142,12 @@ class Arena:
         """Updates the state of the arena and a single robot based on a command"""
         # print(f"{robot.name} chose to {command.command_type.name}({command.parameter})")
         if command.command_type is RobotCommandType.ACCELERATE:
-            robot.velocity += GameParameters.MOTOR_POWER / GameParameters.COMMAND_RATE
+            vx = robot.velocity * cos(robot.velocity_angle / 180 * pi)
+            vy = robot.velocity * sin(robot.velocity_angle / 180 * pi)
+            dx = GameParameters.MOTOR_POWER / GameParameters.COMMAND_RATE * cos(robot.hull_angle / 180 * pi)
+            dy = GameParameters.MOTOR_POWER / GameParameters.COMMAND_RATE * sin(robot.hull_angle / 180 * pi)
+            robot.velocity = sqrt((vx + dx) ** 2 + (vy + dy) ** 2)
+            robot.velocity_angle = atan2(vy + dy, vx + dx) / pi * 180
             robot.velocity = min(GameParameters.MAX_VELOCITY, robot.velocity)
             if robot.accelerate_progress is None:
                 robot.accelerate_progress = 0
@@ -180,8 +187,8 @@ class Arena:
 
     def update_robot_state(self, robot: Robot) -> None:
         # Update robot position
-        robot.position.x += (robot.velocity / GameParameters.COMMAND_RATE) * cos(robot.hull_angle / 180 * pi)
-        robot.position.y += (robot.velocity / GameParameters.COMMAND_RATE) * sin(robot.hull_angle / 180 * pi)
+        robot.position.x += (robot.velocity / GameParameters.COMMAND_RATE) * cos(robot.velocity_angle / 180 * pi)
+        robot.position.y += (robot.velocity / GameParameters.COMMAND_RATE) * sin(robot.velocity_angle / 180 * pi)
         if robot.position.clip(margin=robot.radius):
             robot.bumped_wall = True
 
@@ -200,7 +207,6 @@ class Arena:
             robot.accelerate_progress += 1
             if robot.accelerate_progress >= GameParameters.EXHAUST_FRAMES:
                 robot.accelerate_progress = None
-
 
     def update_missile(self, missile: Missile) -> None:
         """Updates the state of a single missile"""

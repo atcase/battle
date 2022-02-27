@@ -95,7 +95,7 @@ function draw(timestamp) {
     ctx.translate(500, 500);
 
     ctx.save();
-    ctx.scale(0.05, 0.05);
+    ctx.scale(100/arena.remaining, 100/arena.remaining);
     ctx.drawImage(galaxyImage, -galaxyImage.width / 2, -galaxyImage.height / 2);
     ctx.restore();
 

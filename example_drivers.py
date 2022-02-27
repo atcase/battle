@@ -26,6 +26,7 @@ class PongDriver:
             self.accelerate_countdown -= 1
             return RobotCommand(RobotCommandType.ACCELERATE, 0)
         if r.bumped_wall:
+            self.accelerate_countdown = 3
             return RobotCommand(RobotCommandType.TURN_HULL, -45)
 
         if r.radar_ping is not None:
