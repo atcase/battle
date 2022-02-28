@@ -25,9 +25,12 @@ class PongDriver:
         if self.accelerate_countdown:
             self.accelerate_countdown -= 1
             return RobotCommand(RobotCommandType.ACCELERATE, 0)
-        if r.bumped_wall:
+        if r.bumped_wall or r.got_hit:
             self.accelerate_countdown = 3
             return RobotCommand(RobotCommandType.TURN_HULL, -45)
+        elif abs((r.velocity_angle - r.hull_angle + 180) % 360 - 180) > 1:
+            self.accelerate_countdown = 3
+            return RobotCommand(RobotCommandType.ACCELERATE, 0)
 
         if r.radar_ping is not None:
             return RobotCommand(RobotCommandType.FIRE, 100)
