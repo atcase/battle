@@ -22,7 +22,7 @@ function openSocket() {
     };
 
     webSocket.onmessage = function (event) {
-        arena = JSON.parse(event.data);
+        arena = transpose(JSON.parse(event.data));
         window.requestAnimationFrame(draw);
     };
 
@@ -78,7 +78,6 @@ function draw(timestamp) {
     }
     lastUpdate = timestamp;
 
-    const arenaT = transpose(arena);
     const ctx = document.getElementById('canvas').getContext('2d');
 
     ctx.save();
@@ -94,10 +93,13 @@ function draw(timestamp) {
     ctx.save();
     ctx.translate(500, 500);
 
-    ctx.save();
-    ctx.scale(100/arena.remaining, 100/arena.remaining);
-    ctx.drawImage(galaxyImage, -galaxyImage.width / 2, -galaxyImage.height / 2);
-    ctx.restore();
+    if (!arena.winner) {
+        ctx.save();
+        const galaxyScale = 100 / Math.max(1, arena.remaining);
+        ctx.scale(galaxyScale, galaxyScale);
+        ctx.drawImage(galaxyImage, -galaxyImage.width / 2, -galaxyImage.height / 2);
+        ctx.restore();
+    }
 
     ctx.fillStyle = `white`;
     stars.forEach(star => {
@@ -112,7 +114,7 @@ function draw(timestamp) {
     stars = stars.map((s) => s.z > 0 ? s : randomStar())
     ctx.restore();
 
-    arenaT.robots.forEach(robot => {
+    arena.robots.forEach(robot => {
         const img = hullImage;
         const dx = robot.position.x;
         const dy = robot.position.y;
@@ -150,12 +152,12 @@ function draw(timestamp) {
         ctx.restore();
     });
 
-    arenaT.missiles.forEach(missile => {
+    arena.missiles.forEach(missile => {
         const laserScale = SCALE * (0.1 + 0.9 * missile.energy / 5);
         if (!missile.exploding) {
             const img = laserImage;
             const imgDim = laserImage.height;
-            const idx = Math.round(timestamp*5) % (img.width / imgDim);
+            const idx = Math.round(timestamp*.02) % (img.width / imgDim);
             const dx = missile.position.x;
             const dy = missile.position.y;
 
@@ -180,10 +182,11 @@ function draw(timestamp) {
         }
     });
 
-    if (arenaT.winner) {
+    if (arena.winner) {
         ctx.fillStyle = 'red';
-        ctx.font = '16px monospace';
+        ctx.font = '64px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText(`Winner ${arenaT.winner}!`, 500, 500);
+        ctx.fillText(`Winner ${arena.winner}!`, 500, 500);
+        window.requestAnimationFrame(draw);
     }
 }
