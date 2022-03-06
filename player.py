@@ -33,9 +33,6 @@ def play(robot_name: str, driver: Driver, url: str):
                 print(data["echo"])
                 continue
             robot_state = Robot.from_dict(data)
-            if not robot_state.live():
-                print(f"{robot_name} is no longer alive!")
-                break
             command = driver.get_next_command(robot_state)
             if command is None:
                 continue

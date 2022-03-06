@@ -203,7 +203,11 @@ async def play_handler(request):
                 r = match.arena.get_robot(robot_name)
                 msg = json.dumps(asdict(r), separators=(",", ":"))
                 await ws.send_str(msg)
-                if not r.live() or match.arena.winner:
+                if match.arena.winner is not None:
+                    await ws.send_json({"echo": f"{match.arena.winner} is the winner!"})
+                    break
+                if not r.live():
+                    await ws.send_json({"echo": f"*** {r.name} is no longer alive!"})
                     break
         except KeyError:
             print("Robot dropped")
