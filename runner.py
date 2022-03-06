@@ -5,13 +5,18 @@ from copy import deepcopy
 from dataclasses import asdict, dataclass, field
 import json
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
+import uuid
 import aiohttp
 from aiohttp import web
 import aiohttp_jinja2
 import jinja2
+from radarbot import RadarDriver
 
 from robots import Arena, Robot, GameParameters, RobotCommand, RobotCommandType
+from player import Driver
+from pongbot import PongDriver
+from stillbot import StillDriver
 from util import state_as_json
 
 
@@ -24,6 +29,7 @@ MAX_MATCH_PLAYERS = 10
 
 @dataclass
 class Match:
+    match_id: int
     min_num_players: int = 2
     wait_time: int = 10
     started: bool = False
@@ -39,6 +45,35 @@ class Match:
 
     def __post_init__(self):
         self.runner_task = asyncio.create_task(runner_task(self))
+        # For demos, match 0 gets some example bots
+        if self.match_id == 0:
+            self.allow_late_entrants = True
+            self.wait_time = 1
+            asyncio.create_task(demo_player_task("pongbot", PongDriver()))
+            asyncio.create_task(demo_player_task("radarbot", RadarDriver()))
+            asyncio.create_task(demo_player_task("stillbot", StillDriver()))
+
+
+async def demo_player_task(robot_name: str, driver: Driver):
+    try:
+        print(f"Starting demo player {robot_name}")
+        async with aiohttp.ClientSession() as client:
+            async with client.ws_connect("http://localhost:8000/api/play/0") as ws:
+                await ws.send_json({"name": robot_name, "secret": str(uuid.uuid4())})
+                async for msg in ws:
+                    if "echo" in msg.json():
+                        continue
+                    r = Robot.from_dict(msg.json())
+                    cmd = driver.get_next_command(r)
+                    if cmd is None:
+                        continue
+                    if isinstance(cmd, RobotCommand):
+                        cmd = [cmd]
+                    if isinstance(cmd, List):
+                        for c in cmd:
+                            await ws.send_json(c.to_dict())
+    except Exception as e:
+        print(f"Demo player {robot_name} exception: {e!r}")
 
 
 def get_or_create_match(matches: Dict[int, Match], match_id: int, recycle: bool) -> Match:
@@ -47,7 +82,7 @@ def get_or_create_match(matches: Dict[int, Match], match_id: int, recycle: bool)
 
     match = matches.get(match_id)
     if match is None or match.finished and recycle:
-        match = Match()
+        match = Match(match_id)
         matches[match_id] = match
 
     return matches[match_id]
