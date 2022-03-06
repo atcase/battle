@@ -178,7 +178,7 @@ async def watch_handler(request):
         placeholder_arena = Arena()
         try:
             while True:
-                match = get_or_create_match(request.app["matches"], match_id, recycle=False)
+                match = get_or_create_match(request.app["matches"], match_id, recycle=match_id == 0)
                 delay_line = match.arena_state_delay_line
                 # Wait until enough time has passed before we start sending results
                 while len(delay_line) < ARENA_STATE_DELAY_LINE_LEN:
