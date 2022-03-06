@@ -5,7 +5,8 @@ import webbrowser
 import uuid
 import websocket  # type: ignore
 from robots import Robot, RobotCommand
-from typing import List, Protocol, Union
+from typing import List, Union
+from typing_extensions import Protocol
 
 
 class Driver(Protocol):
