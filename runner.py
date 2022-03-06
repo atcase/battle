@@ -33,6 +33,8 @@ class Match:
     event: asyncio.Event = field(default_factory=asyncio.Event)
     command_queues: Dict[str, List[RobotCommand]] = field(default_factory=dict)
     arena_state_delay_line: List[Arena] = field(default_factory=list)
+    player_secrets: Dict[str, str] = field(default_factory=dict)
+    player_connected: Dict[str, bool] = field(default_factory=dict)
     runner_task: asyncio.Task[None] = field(init=False)
 
     def __post_init__(self):
@@ -68,7 +70,7 @@ async def runner_task(match: Match) -> None:
                 standing_orders = {r.name: RobotCommand(RobotCommandType.IDLE, 0) for r in match.arena.robots}
                 # Get new commands for each robot
                 for r in match.arena.robots:
-                    r.cmd_q_len = len(match.command_queues.get(r.name))
+                    r.cmd_q_len = len(match.command_queues[r.name])
                 match.event.set()
                 match.event.clear()
                 await asyncio.sleep(GameParameters.COMMAND_RATE / GameParameters.FPS)
@@ -219,38 +221,48 @@ async def play_handler(request):
             print("Exiting sender")
 
     send_task = None
+    robot_name = None
     try:
         # First wait for the hello message which gives us the robot's name
         hello_msg = await ws.receive_json()
         robot_name = hello_msg["name"]
+        robot_secret = hello_msg["secret"]
         if not isinstance(robot_name, str):
             return
-        if match.started and not match.allow_late_entrants:
-            await ws.send_json({"echo": f"Sorry {robot_name}, this game has already started"})
+        if not isinstance(robot_secret, str):
             return
 
-        # If we already have a player with this name, give up immediately
-        if any(r.name == robot_name for r in match.arena.robots):
-            await ws.send_json({"echo": f"Sorry, {robot_name} is already in the game"})
-            return
-        # Limit the number of players to MAX_MATCH_PLAYERS
-        num_alive = len([r for r in match.arena.robots if r.live()])
-        if num_alive >= MAX_MATCH_PLAYERS:
-            await ws.send_json({"echo": f"Sorry {robot_name}, this game is full"})
-            return
-        # Drop any dead players making room for more
-        if len(match.arena.robots) != num_alive:
-            for r in match.arena.robots[:]:
-                if not r.live():
-                    print(f"Dropping robot {r.name}")
-                    match.arena.robots.remove(r)
-                    match.command_queues.pop(r.name, None)
-        # Finally we can add this new robot
-        await ws.send_json({"echo": f"Welcome, {robot_name}"})
-        print(f"Adding robot {robot_name}")
-        match.arena.robots.append(Robot(robot_name))
-        match.command_queues[robot_name] = []
+        if robot_secret == match.player_secrets.get(robot_name) and not match.player_connected.get(robot_name):
+            await ws.send_json({"echo": f"Welcome back, {robot_name}"})
+        else:
+            if match.started and not match.allow_late_entrants:
+                await ws.send_json({"echo": f"Sorry {robot_name}, this game has already started"})
+                return
+
+            # If we already have a player with this name, give up immediately
+            if any(r.name == robot_name for r in match.arena.robots):
+                await ws.send_json({"echo": f"Sorry, {robot_name} is already in the game"})
+                return
+            # Limit the number of players to MAX_MATCH_PLAYERS
+            num_alive = len([r for r in match.arena.robots if r.live()])
+            if num_alive >= MAX_MATCH_PLAYERS:
+                await ws.send_json({"echo": f"Sorry {robot_name}, this game is full"})
+                return
+            # Drop any dead players making room for more
+            if len(match.arena.robots) != num_alive:
+                for r in match.arena.robots[:]:
+                    if not r.live():
+                        print(f"Dropping robot {r.name}")
+                        match.arena.robots.remove(r)
+                        match.command_queues.pop(r.name, None)
+            # Finally we can add this new robot
+            await ws.send_json({"echo": f"Welcome, {robot_name}"})
+            print(f"Adding robot {robot_name}")
+            match.arena.robots.append(Robot(robot_name))
+            match.command_queues[robot_name] = []
+            match.player_secrets[robot_name] = robot_secret
         # Start sending state updates to the player
+        match.player_connected[robot_name] = True
         send_task = asyncio.create_task(send_updates())
         # Start receiving commands from the player, adding them to the command queue
         async for msg in ws:
@@ -278,6 +290,8 @@ async def play_handler(request):
                 print("ws connection closed with exception %s" % ws.exception())
                 break
     finally:
+        if robot_name is not None:
+            match.player_connected[robot_name] = False
         if send_task is not None:
             send_task.cancel()
             await asyncio.gather(send_task, return_exceptions=True)

@@ -2,7 +2,7 @@ import argparse
 import json
 from urllib.parse import urljoin, urlsplit
 import webbrowser
-import requests
+import uuid
 import websocket  # type: ignore
 from robots import Robot, RobotCommand
 from typing import List, Protocol, Union
@@ -13,7 +13,7 @@ class Driver(Protocol):
         ...
 
 
-def play(robot_name: str, driver: Driver, url: str):
+def play(robot_name: str, robot_secret: str, driver: Driver, url: str):
     print(f"Connecting to game API server... ", end=None)
     ws = websocket.WebSocket()
     try:
@@ -24,7 +24,7 @@ def play(robot_name: str, driver: Driver, url: str):
     print("Connected")
 
     try:
-        ws.send(json.dumps({"name": robot_name}))
+        ws.send(json.dumps({"name": robot_name, "secret": robot_secret}))
         for msg in ws:
             if not msg:
                 break
@@ -54,6 +54,9 @@ def main(robot_name: str, driver: Driver):
     argparser.add_argument("--game-id", default=0, help="The game ID to play - default is 0")
     argparser.add_argument("--url", default="ws://localhost:8000", help="The game server base URL.")
     argparser.add_argument("--browser", action="store_true", help="Open a browser window to watch the game")
+    argparser.add_argument(
+        "--secret", type=str, help="A secret to allow reconnect to the same robot in case of disconnect"
+    )
 
     args = argparser.parse_args()
     url = urljoin(args.url, f"/api/play/{args.game_id}")
@@ -62,4 +65,11 @@ def main(robot_name: str, driver: Driver):
     print(f"Watch this game at: {watch_url}")
     if args.browser:
         webbrowser.open(watch_url)
-    play(args.name, driver, url)
+    if args.secret is None:
+        secret = str(uuid.UUID(fields=(0, 0, 0, 0, 0, uuid.getnode())))
+    else:
+        secret = args.secret
+    try:
+        play(args.name, secret, driver, url)
+    except KeyboardInterrupt:
+        pass

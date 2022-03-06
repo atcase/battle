@@ -10,7 +10,7 @@ class PongDriver:
     """Starts moving and then maintains the same speed, bouncing off the walls. Fires if radar pings."""
 
     def get_next_command(self, r: Robot):
-        if r.cmd_q_len > 0:
+        if r.cmd_q_len:
             return None
         if r.bumped_wall or r.got_hit:
             return [
