@@ -41,7 +41,7 @@ class Match:
     arena_state_delay_line: List[Arena] = field(default_factory=list)
     player_secrets: Dict[str, str] = field(default_factory=dict)
     player_connected: Dict[str, bool] = field(default_factory=dict)
-    runner_task: asyncio.Task[None] = field(init=False)
+    runner_task: asyncio.Task = field(init=False)
 
     def __post_init__(self):
         self.runner_task = asyncio.create_task(runner_task(self))
