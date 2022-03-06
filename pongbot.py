@@ -1,12 +1,15 @@
+#!/usr/bin/env python3
+
 from dataclasses import dataclass
 from robots import RobotCommand, RobotCommandType, Robot
-from player import play
+from player import main
+
 
 @dataclass
 class PongDriver:
     """Starts moving and then maintains the same speed, bouncing off the walls. Fires if radar pings."""
 
-    def get_next_command(self, r: Robot) -> RobotCommand:
+    def get_next_command(self, r: Robot):
         if r.cmd_q_len > 0:
             return None
         if r.bumped_wall or r.got_hit:
@@ -31,6 +34,5 @@ class PongDriver:
 
 
 if __name__ == "__main__":
-    URL = "ws://localhost:8000/api/play/0"
     driver = PongDriver()
-    play("pongbot", driver, URL)
+    main("pongbot", driver)

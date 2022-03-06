@@ -4,6 +4,7 @@ from typing import Any, Dict
 
 from robots import Arena
 
+
 class JSONEncoder(json.JSONEncoder):
     """Minimizes JSON string length by reducing resolution of floats, convert bool to int, and transpose"""
 

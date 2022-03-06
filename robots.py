@@ -100,6 +100,7 @@ class Robot:
     def from_dict(cls, d: Dict[str, Any]) -> "Robot":
         return cls(position=Position(**d.pop("position")), **d)
 
+
 @dataclass
 class Missile:
     """The current state of a single missile"""
@@ -131,6 +132,7 @@ class RobotCommand:
 
     def to_dict(self) -> Dict[str, Any]:
         return {"command_type": self.command_type.value, "parameter": self.parameter}
+
 
 @dataclass
 class Arena:

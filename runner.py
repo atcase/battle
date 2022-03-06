@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import asyncio
 from copy import deepcopy
 from dataclasses import asdict, dataclass, field
@@ -18,6 +20,7 @@ STATIC_PATH = Path(__file__).parent / "static"
 ARENA_STATE_DELAY_LINE_LEN = GameParameters.FPS * 10
 MAX_MATCH_ID = 1000
 MAX_MATCH_PLAYERS = 10
+
 
 @dataclass
 class Match:
@@ -132,7 +135,7 @@ async def watch_handler(request):
     await ws.prepare(request)
 
     match_id = int(request.match_info["match_id"])
-    print(match_id)
+    print(f"New request for match {match_id}")
 
     async def send_updates():
         placeholder_arena = Arena()
@@ -254,7 +257,7 @@ async def play_handler(request):
                         continue
                     if isinstance(cmds, dict):
                         cmds = [cmds]
-                    for cmd in cmds[:match.arena.remaining]:
+                    for cmd in cmds[: match.arena.remaining]:
                         command = RobotCommand(
                             command_type=RobotCommandType(cmd.get("command_type")),
                             parameter=float(cmd.get("parameter")),
@@ -286,6 +289,7 @@ async def amain():
         await server_task()
     except KeyboardInterrupt:
         return
+
 
 if __name__ == "__main__":
     asyncio.run(amain())

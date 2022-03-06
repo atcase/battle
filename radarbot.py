@@ -1,6 +1,8 @@
+#!/usr/bin/env python3
+
 from dataclasses import dataclass
 from robots import RobotCommand, RobotCommandType, Robot
-from player import play
+from player import main
 
 
 @dataclass
@@ -25,8 +27,6 @@ class RadarDriver:
         return RobotCommand(RobotCommandType.TURN_TURRET, self.turret_dir)
 
 
-
 if __name__ == "__main__":
-    URL = "ws://localhost:8000/api/play/0"
     driver = RadarDriver()
-    play("radarbot", driver, URL)
+    main("radarbot", driver)

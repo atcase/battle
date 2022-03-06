@@ -1,6 +1,8 @@
+#!/usr/bin/env python3
+
 from dataclasses import dataclass
 from robots import RobotCommand, RobotCommandType, Robot
-from player import play
+from player import main
 
 
 @dataclass
@@ -9,16 +11,13 @@ class StillDriver:
 
     pinged: bool = False
 
-    def get_next_command(self, r: Robot) -> RobotCommand:
+    def get_next_command(self, r: Robot):
         if r.radar_ping is not None or self.pinged:
             self.pinged = True
             return RobotCommand(RobotCommandType.FIRE, 100)
         return RobotCommand(RobotCommandType.TURN_TURRET, 5)
 
 
-
-
 if __name__ == "__main__":
-    URL = "ws://localhost:8000/api/play/0"
     driver = StillDriver()
-    play("stillbot", driver, URL)
+    main("stillbot", driver)
