@@ -14,8 +14,14 @@ var stars = [];
 function openSocket() {
     var loc = window.location;
     var scheme = loc.protocol === "https:" ? "wss:" : "ws:";
+    const prefix = "/game/";
+    var gameId = "0";
 
-    webSocket = new WebSocket(`${scheme}//${loc.host}/api/watch`);
+    if (loc.pathname.startsWith(prefix)) {
+        gameId = loc.pathname.slice(prefix.length);
+    }
+
+    webSocket = new WebSocket(`${scheme}//${loc.host}/api/watch/${gameId}`);
 
     webSocket.onopen = function (event) {
         console.log("open websocket")
@@ -181,6 +187,14 @@ function draw(timestamp) {
             ctx.restore();
         }
     });
+
+    if (arena.robots.length === 0) {
+        ctx.fillStyle = 'red';
+        ctx.font = '64px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Waiting for players`, 500, 500);
+        window.requestAnimationFrame(draw);
+    }
 
     if (arena.winner) {
         ctx.fillStyle = 'red';

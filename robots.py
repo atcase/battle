@@ -2,7 +2,7 @@ from dataclasses import dataclass, field, replace
 from enum import Enum, auto
 from math import atan2, cos, sin, pi, sqrt
 from random import random
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 
 class GameParameters:
@@ -90,11 +90,15 @@ class Robot:
     bumped_wall: bool = False
     firing_progress: Optional[int] = None
     accelerate_progress: Optional[int] = None
+    cmd_q_len: Optional[int] = None
 
     def live(self) -> bool:
         """Returns whether robot is still alive"""
         return self.health > 0
 
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "Robot":
+        return cls(position=Position(**d.pop("position")), **d)
 
 @dataclass
 class Missile:
@@ -125,6 +129,8 @@ class RobotCommand:
     command_type: RobotCommandType
     parameter: float
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {"command_type": self.command_type.value, "parameter": self.parameter}
 
 @dataclass
 class Arena:
@@ -307,6 +313,8 @@ class Arena:
 
     def get_winner(self) -> Optional[Robot]:
         """Returns the winner or None if no winner yet"""
+        if len(self.robots) <= 1:
+            return None
         remaining = [r for r in self.robots if r.live()]
         if len(remaining) == 1:
             return remaining[0]
@@ -314,3 +322,9 @@ class Arena:
             # If all robots are dead, return the one that sustained the least damage
             return max(self.robots, key=lambda r: r.health)
         return None
+
+    def get_robot(self, robot_name: str) -> Robot:
+        for r in self.robots:
+            if r.name == robot_name:
+                return r
+        raise KeyError(robot_name)
