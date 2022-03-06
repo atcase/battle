@@ -5,11 +5,11 @@ to fight a battle against other players.
 
 To setup the environment, clone this repo and run:
 
-$ python3 -m pip install -r requirements.txt --user
+    $ python3 -m pip install -r requirements.txt --user
 
 A sample robot battlefield server can be run with:
 
-$ python3 runner.py
+    $ python3 runner.py
 
 Once running, a sample game can be watched at http://localhost:8000/
 
@@ -17,11 +17,11 @@ If a publically available battlefield server is already available, then the abov
 
 Three example robots are provided and will automaticaly join the demo game.
 
-- pongbot: a spaceship driver who bounces around the screen
-- stillbot: a spaceship driver who stays still and shoots
-- radarbot: a spaceship driver with an optimized radar scanning algorithm
+- `pongbot`: a spaceship driver who bounces around the screen
+- `stillbot`: a spaceship driver who stays still and shoots
+- `radarbot`: a spaceship driver with an optimized radar scanning algorithm
 
-Their source code can be viewed in pongbot.py, stillbot.py and radarbot.py respectively.
+Their source code can be viewed in [pongbot.py](./pongbot.py), [stillbot.py](./stillbot.py) and [radarbot.py](./radarbot.py) respectively.
 
 The robot driver works by calling the `get_next_command` function with the current state
 of the robot. The function then returns the next command to issue.
@@ -50,13 +50,13 @@ The input to the `get_next_command` function is the current state of the robot a
 - `velocity_angle`: The current direction (in degrees) that the robot is moving.
 - `hull_angle`: The current direction (in degrees) that the hull is facing.
 - `turret_angle`: The angular difference between where the hull is facing, and where the gun turret is facing. If set to 0 then the gun turret is facing forwards.
-- `radar_angle`: The angular difference between where the gun turret is facing, and where the scannign radar is facing. i.e. the radar is sitting on top of the gun turret and moves whenever the turret moves. It can also move independently if commanded.
+- `radar_angle`: The angular difference between where the gun turret is facing, and where the scanning radar is facing. i.e. the radar is sitting on top of the gun turret and moves whenever the turret moves. It can also move independently if commanded.
 - `health`: The current health of the spaceship from 100% down to 0%.
 - `weapon_energy`: The current weapon energy. The weapons recharge each frame, and firing the weapon depletes energy.
 - `radius`: The radius of the spaceship. This is a constant value and is used to calculate whether the spaceship has been hit.
 - `radar_ping`: If the radar detected an enemy spaceship during the last scan (rotation), this value indicates the distance.
-- `got_hit`: If the ship was hit during the last turn, this flag will be True.
-- `bumped_wall`: If the ship bumped the wall defined by the 1000x1000 battlefield, this flag will be True.
+- `got_hit`: If the ship was hit during the last turn, this flag will be `True`.
+- `bumped_wall`: If the ship bumped the wall defined by the 1000x1000 battlefield, this flag will be `True`.
 - `cmd_q_len`: The robot may queue up several commands to the spaceship. This property indicates how many commands are already queued.
 
 ## Connecting a new robot to a server
@@ -64,7 +64,7 @@ The input to the `get_next_command` function is the current state of the robot a
 The robots may be copied, modified or replaced. They can then connect to a battlefield server by running them locally,
 with the server URL and robot name provided on the command line. e.g.
 
-$ ./pongbot.py pongbot2 --url wss://some.battlefield.server
+    $ ./pongbot.py pongbot2 --url wss://some.battlefield.server
 
 The URL to watch the game will be provided, and the robot then connects.
 
