@@ -67,10 +67,15 @@ class Arena:
 
     def update_robot_state(self, robot: Robot) -> None:
         # Update robot position
-        robot.position.x += (robot.velocity / GameParameters.COMMAND_RATE) * cos(robot.velocity_angle / 180 * pi)
-        robot.position.y += (robot.velocity / GameParameters.COMMAND_RATE) * sin(robot.velocity_angle / 180 * pi)
+        old_position = replace(robot.position)
+        robot.position.x += robot.velocity * cos(robot.velocity_angle / 180 * pi)
+        robot.position.y += robot.velocity * sin(robot.velocity_angle / 180 * pi)
         if robot.position.clip(margin=robot.radius):
             robot.bumped_wall = True
+            if abs(robot.velocity) > 0.001:
+                effective_v = robot.position - old_position
+                robot.velocity = abs(effective_v)
+                robot.velocity_angle = effective_v.angle()
 
         # Recharge weapon
         robot.weapon_energy += GameParameters.WEAPON_RECHARGE_RATE / GameParameters.COMMAND_RATE
