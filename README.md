@@ -5,11 +5,7 @@ to fight a battle against other players.
 
 ![](battle_demo.gif)
 
-Install from PyPI, with:
-
-    $ python3 -m pip install battle --user
-
-Alternatively, install from GitHub, with:
+Install from GitHub, with:
 
     $ python3 -m pip install git+https://github.com/atcase/battle.git --user
 
