@@ -3,9 +3,9 @@
 This is a robot programming game which allows programming a virtual spaceship robot driver with simple commands
 to fight a battle against other players.
 
-To install from a git clone, run:
+To install from GitHub, run:
 
-    $ python3 -m pip install -r requirements.txt --user
+    $ python3 -m pip install git+https://github.com/atcase/robots.git --user
 
 To install from PyPI, run:
 
