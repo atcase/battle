@@ -198,13 +198,20 @@ async def watch_handler(request):
                     if idx >= len(delay_line):
                         idx = len(delay_line) - 1
                     # Ensure we don't fall behind either
-                    idx = max(0, idx, len(delay_line) - ARENA_STATE_DELAY_LINE_LEN)
+                    lag = len(delay_line) - ARENA_STATE_DELAY_LINE_LEN - idx
+                    if lag > 0:
+                        fps_mult = 1.1
+                    elif lag < 0:
+                        fps_mult = 0.99
+                    else:
+                        fps_mult = 1
+
                     # Get the arena state to send
                     arena = delay_line[idx]
                     idx += 1
                     # Send it
                     msg = state_as_json(arena)
-                    await asyncio.gather(ws.send_str(msg), asyncio.sleep(1 / GameParameters.FPS))
+                    await asyncio.gather(ws.send_str(msg), asyncio.sleep(1 / GameParameters.FPS / fps_mult))
                 # Match is finished and we've replayed everything, chill for a bit - replay the final
                 # frame until a new match is available
                 await asyncio.sleep(1)
