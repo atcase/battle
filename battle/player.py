@@ -13,14 +13,14 @@ from battle.robots import Robot, RobotCommand
 def play(robot_name: str, robot_secret: str, driver, url: str):
     """Connects to the game server at `url` and passes robot state updates to the `driver`, and commands back
     to the game server"""
-    print(f"Connecting to game API server... ", end=None)
+    print(f"Connecting to game API server... ", end="")
     ws = websocket.WebSocket()
     try:
         ws.connect(url)
     except ConnectionRefusedError:
         print("Could not connect")
         return
-    print("Connected")
+    print("Done!")
 
     try:
         ws.send(json.dumps({"name": robot_name, "secret": robot_secret}))
@@ -41,7 +41,7 @@ def play(robot_name: str, robot_secret: str, driver, url: str):
                 if not isinstance(cmd, RobotCommand):
                     raise TypeError(f"Commands should be of type RobotCommand, not {type(cmd)}")
                 ws.send(json.dumps(cmd.to_dict()))
-    except websocket.WebSocketConnectionClosedException:
+    except (websocket.WebSocketConnectionClosedException, BrokenPipeError):
         pass
     finally:
         print("Connection closed")
