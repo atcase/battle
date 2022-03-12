@@ -111,26 +111,27 @@ class Arena:
             if not robot.live():
                 continue
 
-            # Update radar pings
-            for target in self.robots:
-                if robot is target or not target.live():
-                    continue
+            if robot.name in self._prior_radar_angle:
+                # Update radar pings
+                for target in self.robots:
+                    if robot is target or not target.live():
+                        continue
 
-                base_angle = self._prior_radar_angle.get(robot.name, 0.0)
-                target_angle = ((target.position - robot.position).angle() - base_angle + 180.0) % 360.0 - 180.0
-                now_angle = (
-                    robot.hull_angle + robot.turret_angle + robot.radar_angle - base_angle + 180.0
-                ) % 360.0 - 180.0
-                if (
-                    now_angle > 0
-                    and target_angle > 0
-                    and now_angle > target_angle
-                    or now_angle < 0
-                    and target_angle < 0
-                    and now_angle < target_angle
-                ):
-                    robot.radar_ping = abs(target.position - robot.position)
-                    break
+                    base_angle = self._prior_radar_angle[robot.name]
+                    target_angle = ((target.position - robot.position).angle() - base_angle + 180.0) % 360.0 - 180.0
+                    now_angle = (
+                        robot.hull_angle + robot.turret_angle + robot.radar_angle - base_angle + 180.0
+                    ) % 360.0 - 180.0
+                    if (
+                        now_angle > 0
+                        and target_angle > 0
+                        and now_angle > target_angle
+                        or now_angle < 0
+                        and target_angle < 0
+                        and now_angle < target_angle
+                    ):
+                        robot.radar_ping = abs(target.position - robot.position)
+                        break
 
             # Save prior radar state for next calculation
             self._prior_radar_angle[robot.name] = robot.hull_angle + robot.turret_angle + robot.radar_angle
