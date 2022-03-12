@@ -3,7 +3,7 @@
 This is a robot programming game which allows programming a virtual spaceship robot driver with simple commands
 to fight a battle against other players.
 
-![Alt Text](https://github.com/atcase/battle/battle_demo.gif)
+![](battle_demo.gif)
 
 Install from PyPI, with:
 
