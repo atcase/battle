@@ -20,11 +20,11 @@ If a publically available battlefield server is available elsewhere, then the ab
 Three example robots are provided and will automaticaly join the demo game.
 
 - `pongbot`: a spaceship driver who bounces around the screen
-- `stillbot`: a spaceship driver who stays still and shoots
+- `chillbot`: a spaceship driver who stays still and shoots
 - `radarbot`: a spaceship driver with an optimized radar scanning algorithm
 
 Their source code can be viewed in [pongbot.py](https://github.com/atcase/battle/blob/master/battle/pongbot.py),
-[stillbot.py](https://github.com/atcase/battle/blob/master/battle/stillbot.py) and
+[chillbot.py](https://github.com/atcase/battle/blob/master/battle/chillbot.py) and
 [radarbot.py](https://github.com/atcase/battle/blob/master/battle/radarbot.py) respectively.
 
 The robot driver works by calling the `get_next_command` function with the current state

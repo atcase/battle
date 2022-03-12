@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""stillbot - a demo robot driver for controlling a battle ship
+"""chillbot - a demo robot driver for controlling a battle ship
 
 This example file can be copied as a basis for your own robot. Copy it into a local
 folder, rename it to e.g. yourbot.py, start editing and run it from the command line as:
@@ -18,7 +18,7 @@ from battle.robots import Robot, RobotCommand, RobotCommandType
 
 
 @dataclass
-class StillDriver:
+class ChillDriver:
     """A simple robot driver that spins its turret and fires if its radar pings"""
 
     pinged: bool = False
@@ -31,5 +31,5 @@ class StillDriver:
 
 
 def main():
-    driver = StillDriver()
-    player_main("stillbot", driver)
+    driver = ChillDriver()
+    player_main("chillbot", driver)

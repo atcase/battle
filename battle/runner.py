@@ -18,7 +18,7 @@ from battle.arena import Arena
 from battle.pongbot import PongDriver
 from battle.radarbot import RadarDriver
 from battle.robots import GameParameters, Robot, RobotCommand, RobotCommandType
-from battle.stillbot import StillDriver
+from battle.chillbot import ChillDriver
 from battle.util import state_as_json
 
 TEMPLATE_PATH = Path(__file__).parent / "templates"
@@ -52,7 +52,7 @@ class Match:
             self.wait_time = 1
             asyncio.create_task(demo_player_task("pongbot", PongDriver()))
             asyncio.create_task(demo_player_task("radarbot", RadarDriver()))
-            asyncio.create_task(demo_player_task("stillbot", StillDriver()))
+            asyncio.create_task(demo_player_task("chillbot", ChillDriver()))
 
 
 async def demo_player_task(robot_name: str, driver):
