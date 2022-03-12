@@ -1,4 +1,4 @@
-## Robot Spaceship Battlefield
+## battle - a Python based robot battle simulator set in space
 
 This is a robot programming game which allows programming a virtual spaceship robot driver with simple commands
 to fight a battle against other players.
