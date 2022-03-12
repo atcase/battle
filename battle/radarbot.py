@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-
 from dataclasses import dataclass
-from robots import RobotCommand, RobotCommandType, Robot
-from player import main
+
+from battle.player import player_main
+from battle.robots import Robot, RobotCommand, RobotCommandType
 
 
 @dataclass
@@ -27,6 +26,6 @@ class RadarDriver:
         return RobotCommand(RobotCommandType.TURN_TURRET, self.turret_dir)
 
 
-if __name__ == "__main__":
+def main():
     driver = RadarDriver()
-    main("radarbot", driver)
+    player_main("radarbot", driver)

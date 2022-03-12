@@ -2,7 +2,7 @@ from dataclasses import asdict
 import json
 from typing import Any, Dict
 
-from robots import Arena
+from battle.arena import Arena
 
 
 class JSONEncoder(json.JSONEncoder):

@@ -1,24 +1,25 @@
 #!/usr/bin/env python3
 
+import argparse
 import asyncio
+import json
+import uuid
 from copy import deepcopy
 from dataclasses import asdict, dataclass, field
-import json
 from pathlib import Path
-from typing import Any, Dict, List
-import uuid
+from typing import Dict, List
+
 import aiohttp
-from aiohttp import web
 import aiohttp_jinja2
 import jinja2
-from radarbot import RadarDriver
+from aiohttp import web
 
-from robots import Arena, Robot, GameParameters, RobotCommand, RobotCommandType
-from player import Driver
-from pongbot import PongDriver
-from stillbot import StillDriver
-from util import state_as_json
-
+from battle.arena import Arena
+from battle.pongbot import PongDriver
+from battle.radarbot import RadarDriver
+from battle.robots import GameParameters, Robot, RobotCommand, RobotCommandType
+from battle.stillbot import StillDriver
+from battle.util import state_as_json
 
 TEMPLATE_PATH = Path(__file__).parent / "templates"
 STATIC_PATH = Path(__file__).parent / "static"
@@ -54,7 +55,7 @@ class Match:
             asyncio.create_task(demo_player_task("stillbot", StillDriver()))
 
 
-async def demo_player_task(robot_name: str, driver: Driver):
+async def demo_player_task(robot_name: str, driver):
     try:
         print(f"Starting demo player {robot_name}")
         async with aiohttp.ClientSession() as client:
@@ -139,7 +140,7 @@ async def runner_task(match: Match) -> None:
         print(f"Runner exception: {e!r}")
 
 
-async def server_task() -> None:
+async def server_task(bind_addr: str = "127.0.0.1") -> None:
     app = web.Application()
     aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(TEMPLATE_PATH))
 
@@ -152,8 +153,9 @@ async def server_task() -> None:
     app.router.add_static("/", STATIC_PATH, name="static", append_version=True)
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", 8000)
+    site = web.TCPSite(runner, bind_addr, 8000)
     await site.start()
+    print(f"Serving on http://{bind_addr}:8000")
     try:
         await asyncio.Future()
     finally:
@@ -338,11 +340,14 @@ async def play_handler(request):
 
 
 async def amain():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--addr", default="127.0.0.1", help="Battle server bind address (default: 127.0.0.1)")
+    args = parser.parse_args()
     try:
-        await server_task()
+        await server_task(args.addr)
     except KeyboardInterrupt:
         return
 
 
-if __name__ == "__main__":
+def main():
     asyncio.run(amain())

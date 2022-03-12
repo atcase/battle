@@ -1,20 +1,18 @@
 import argparse
 import json
-from urllib.parse import urljoin, urlsplit
-import webbrowser
 import uuid
-import websocket  # type: ignore
-from robots import Robot, RobotCommand
+import webbrowser
 from typing import List, Union
-from typing_extensions import Protocol
+from urllib.parse import urljoin, urlsplit
+
+import websocket
+
+from battle.robots import Robot, RobotCommand
 
 
-class Driver(Protocol):
-    def get_next_command(self, r: Robot) -> Union[RobotCommand, List[RobotCommand], None]:
-        ...
-
-
-def play(robot_name: str, robot_secret: str, driver: Driver, url: str):
+def play(robot_name: str, robot_secret: str, driver, url: str):
+    """Connects to the game server at `url` and passes robot state updates to the `driver`, and commands back
+    to the game server"""
     print(f"Connecting to game API server... ", end=None)
     ws = websocket.WebSocket()
     try:
@@ -49,7 +47,8 @@ def play(robot_name: str, robot_secret: str, driver: Driver, url: str):
         print("Connection closed")
 
 
-def main(robot_name: str, driver: Driver):
+def player_main(robot_name: str, driver):
+    """Main entry point for running a robot"""
     argparser = argparse.ArgumentParser()
     argparser.add_argument("name", nargs="?", default=robot_name, help="The name of the player.")
     argparser.add_argument("--game-id", default=0, help="The game ID to play - default is 0")
@@ -60,7 +59,7 @@ def main(robot_name: str, driver: Driver):
     )
 
     args = argparser.parse_args()
-    url = urljoin(args.url, f"/api/play/{args.game_id}")
+    url = urljoin(args.url.replace("http", "ws"), f"/api/play/{args.game_id}")
     us = urlsplit(args.url)
     watch_url = f"{us.scheme.replace('ws', 'http')}://{us.netloc}/game/{args.game_id}"
     print(f"Watch this game at: {watch_url}")

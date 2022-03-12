@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-
 from dataclasses import dataclass
-from robots import RobotCommand, RobotCommandType, Robot
-from player import main
+
+from battle.player import player_main
+from battle.robots import Robot, RobotCommand, RobotCommandType
 
 
 @dataclass
@@ -18,6 +17,6 @@ class StillDriver:
         return RobotCommand(RobotCommandType.TURN_TURRET, 5)
 
 
-if __name__ == "__main__":
+def main():
     driver = StillDriver()
-    main("stillbot", driver)
+    player_main("stillbot", driver)
