@@ -3,13 +3,15 @@
 This is a robot programming game which allows programming a virtual spaceship robot driver with simple commands
 to fight a battle against other players.
 
-To install from GitHub, run:
+![Alt Text](https://github.com/atcase/battle/battle_demo.gif)
 
-    $ python3 -m pip install git+https://github.com/atcase/robots.git --user
-
-To install from PyPI, run:
+Install from PyPI, with:
 
     $ python3 -m pip install battle --user
+
+Alternatively, install from GitHub, with:
+
+    $ python3 -m pip install git+https://github.com/atcase/battle.git --user
 
 A sample robot battlefield server can then be run with:
 
@@ -17,7 +19,7 @@ A sample robot battlefield server can then be run with:
 
 Once running, a sample game can be watched at http://localhost:8000/
 
-If a publically available battlefield server is already available, then the above step can be skipped.
+If a publically available battlefield server is available elsewhere, then the above step can be skipped.
 
 Three example robots are provided and will automaticaly join the demo game.
 
@@ -25,8 +27,9 @@ Three example robots are provided and will automaticaly join the demo game.
 - `stillbot`: a spaceship driver who stays still and shoots
 - `radarbot`: a spaceship driver with an optimized radar scanning algorithm
 
-Their source code can be viewed in [pongbot.py](./battle/pongbot.py), [stillbot.py](./battle/stillbot.py) and
-[radarbot.py](./battle/radarbot.py) respectively.
+Their source code can be viewed in [pongbot.py](https://github.com/atcase/battle/pongbot.py),
+[stillbot.py](https://github.com/atcase/battle/stillbot.py) and
+[radarbot.py](https://github.com/atcase/battle/radarbot.py) respectively.
 
 The robot driver works by calling the `get_next_command` function with the current state
 of the robot. The function then returns the next command to issue.
