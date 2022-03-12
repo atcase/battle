@@ -27,9 +27,9 @@ Three example robots are provided and will automaticaly join the demo game.
 - `stillbot`: a spaceship driver who stays still and shoots
 - `radarbot`: a spaceship driver with an optimized radar scanning algorithm
 
-Their source code can be viewed in [pongbot.py](https://github.com/atcase/battle/pongbot.py),
-[stillbot.py](https://github.com/atcase/battle/stillbot.py) and
-[radarbot.py](https://github.com/atcase/battle/radarbot.py) respectively.
+Their source code can be viewed in [pongbot.py](https://github.com/atcase/battle/blob/master/battle/pongbot.py),
+[stillbot.py](https://github.com/atcase/battle/blob/master/battle/stillbot.py) and
+[radarbot.py](https://github.com/atcase/battle/blob/master/battle/radarbot.py) respectively.
 
 The robot driver works by calling the `get_next_command` function with the current state
 of the robot. The function then returns the next command to issue.

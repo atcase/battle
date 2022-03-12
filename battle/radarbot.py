@@ -1,3 +1,16 @@
+#!/usr/bin/env python3
+"""radarbot - a demo robot driver for controlling a battle ship
+
+This example file can be copied as a basis for your own robot. Copy it into a local
+folder, rename it to e.g. yourbot.py, start editing and run it from the command line as:
+
+  $ python3 yourbot.py
+
+You'll want to edit the default name of your bots in the last line of this file, e.g.
+
+  player_main("yourbot", driver)
+"""
+
 from dataclasses import dataclass
 
 from battle.player import player_main
