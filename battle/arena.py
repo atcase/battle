@@ -78,7 +78,7 @@ class Arena:
                 robot.velocity_angle = effective_v.angle()
 
         # Recharge weapon
-        robot.weapon_energy += GameParameters.WEAPON_RECHARGE_RATE / GameParameters.COMMAND_RATE
+        robot.weapon_energy += GameParameters.WEAPON_RECHARGE_RATE
         robot.weapon_energy = min(GameParameters.MAX_DAMAGE, robot.weapon_energy)
 
         # Manage turret firing progress for animations
@@ -98,7 +98,7 @@ class Arena:
         if missile.exploding:
             missile.explode_progress += 1
         else:
-            v = GameParameters.BULLET_VELOCITY / GameParameters.COMMAND_RATE
+            v = GameParameters.BULLET_VELOCITY
             missile.position.x += v * cos(missile.angle / 180 * pi)
             missile.position.y += v * sin(missile.angle / 180 * pi)
             missile.position.clip()

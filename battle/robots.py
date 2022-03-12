@@ -6,15 +6,15 @@ from typing import Any, Dict, Optional
 
 
 class GameParameters:
-    MAX_VELOCITY = 5
+    MAX_VELOCITY = 3
     MAX_TURN_ANGLE = 15
     MAX_TURN_RADAR_ANGLE = 180
     MOTOR_POWER = 1
-    BULLET_VELOCITY = 30
+    BULLET_VELOCITY = 15
     FPS = 20
-    COMMAND_RATE = 2
+    COMMAND_RATE = 5
     MAX_DAMAGE = 5
-    WEAPON_RECHARGE_RATE = 0.2
+    WEAPON_RECHARGE_RATE = 0.1
     ARENA_WIDTH = 1000
     ARENA_HEIGHT = 1000
     EXPLODE_FRAMES = 6
