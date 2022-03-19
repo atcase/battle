@@ -1,5 +1,5 @@
-from dataclasses import asdict
 import json
+from dataclasses import asdict
 from typing import Any, Dict
 
 from battle.arena import Arena

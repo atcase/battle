@@ -15,10 +15,10 @@ import jinja2
 from aiohttp import web
 
 from battle.arena import Arena
+from battle.chillbot import ChillDriver
 from battle.pongbot import PongDriver
 from battle.radarbot import RadarDriver
 from battle.robots import GameParameters, Robot, RobotCommand, RobotCommandType
-from battle.chillbot import ChillDriver
 from battle.util import state_as_json
 
 TEMPLATE_PATH = Path(__file__).parent / "templates"
