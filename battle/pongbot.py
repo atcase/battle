@@ -48,3 +48,7 @@ class PongDriver:
 def main():
     driver = PongDriver()
     player_main("pongbot", driver)
+
+
+if __name__ == "__main__":
+    main()

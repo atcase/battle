@@ -42,3 +42,7 @@ class RadarDriver:
 def main():
     driver = RadarDriver()
     player_main("radarbot", driver)
+
+
+if __name__ == "__main__":
+    main()

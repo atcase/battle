@@ -33,3 +33,7 @@ class ChillDriver:
 def main():
     driver = ChillDriver()
     player_main("chillbot", driver)
+
+
+if __name__ == "__main__":
+    main()
