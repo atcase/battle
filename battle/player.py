@@ -2,7 +2,6 @@ import argparse
 import json
 import uuid
 import webbrowser
-from typing import List, Union
 from urllib.parse import urljoin, urlsplit
 
 import websocket

@@ -42,7 +42,7 @@ class PongDriver:
 
         if r.radar_ping is not None:
             return RobotCommand(RobotCommandType.FIRE, 100)
-        return RobotCommand(RobotCommandType.TURN_TURRET, 2)
+        return RobotCommand(RobotCommandType.TURN_TURRET, 5)
 
 
 def main():

@@ -4,10 +4,12 @@ import argparse
 import asyncio
 import json
 import uuid
+from collections import defaultdict
 from copy import deepcopy
 from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import aiohttp
 import aiohttp_jinja2
@@ -16,6 +18,7 @@ from aiohttp import web
 
 from battle.arena import Arena
 from battle.chillbot import ChillDriver
+from battle.persistence import Connection, create_connection, get_leaderboard, store_match, store_match_cmd_stat
 from battle.pongbot import PongDriver
 from battle.radarbot import RadarDriver
 from battle.robots import GameParameters, Robot, RobotCommand, RobotCommandType
@@ -24,13 +27,13 @@ from battle.util import state_as_json
 TEMPLATE_PATH = Path(__file__).parent / "templates"
 STATIC_PATH = Path(__file__).parent / "static"
 ARENA_STATE_DELAY_LINE_LEN = GameParameters.FPS * 10
-MAX_MATCH_ID = 1000
+MAX_ARENA_ID = 1000
 MAX_MATCH_PLAYERS = 10
 
 
 @dataclass
 class Match:
-    match_id: int
+    arena_id: int
     min_num_players: int = 2
     wait_time: int = 10
     started: bool = False
@@ -43,11 +46,13 @@ class Match:
     player_secrets: Dict[str, str] = field(default_factory=dict)
     player_connected: Dict[str, bool] = field(default_factory=dict)
     runner_task: asyncio.Task = field(init=False)
+    stats_db: Optional[Connection] = None
+    stats: Dict[str, Dict[str, int]] = field(default_factory=lambda: defaultdict(lambda: defaultdict(lambda: 0)))
 
     def __post_init__(self):
         self.runner_task = asyncio.create_task(runner_task(self))
         # For demos, match 0 gets some example bots
-        if self.match_id == 0:
+        if self.arena_id == 0:
             self.allow_late_entrants = True
             self.wait_time = 1
             asyncio.create_task(demo_player_task("pongbot", PongDriver()))
@@ -77,16 +82,16 @@ async def demo_player_task(robot_name: str, driver):
         print(f"Demo player {robot_name} exception: {e!r}")
 
 
-def get_or_create_match(matches: Dict[int, Match], match_id: int, recycle: bool) -> Match:
-    if MAX_MATCH_ID < 0 or match_id > MAX_MATCH_ID:
-        raise KeyError(match_id)
+def get_or_create_match(matches: Dict[int, Match], arena_id: int, recycle: bool, db: Connection) -> Match:
+    if MAX_ARENA_ID < 0 or arena_id > MAX_ARENA_ID:
+        raise KeyError(arena_id)
 
-    match = matches.get(match_id)
+    match = matches.get(arena_id)
     if match is None or match.finished and recycle:
-        match = Match(match_id)
-        matches[match_id] = match
+        match = Match(arena_id, stats_db=db)
+        matches[arena_id] = match
 
-    return matches[match_id]
+    return matches[arena_id]
 
 
 async def runner_task(match: Match) -> None:
@@ -116,6 +121,9 @@ async def runner_task(match: Match) -> None:
                         standing_orders[r.name] = q.pop(0)
                     else:
                         standing_orders[r.name] = RobotCommand(RobotCommandType.IDLE, 0)
+                # Save some stats
+                for name, order in standing_orders.items():
+                    match.stats[name][order.command_type.name] += 1
                 # Process the commands
                 match.arena.update_commands(standing_orders)
                 # Retain all commands as standing orders, except for FIRE which only occurs once
@@ -136,6 +144,14 @@ async def runner_task(match: Match) -> None:
         match.event.set()
         match.event.clear()
         print(f"{winner.name} is the winner!")
+        if match.stats_db:
+            print("Storing match stats ...", end="")
+            match_id = store_match(match.stats_db, match.arena_id, datetime.now(tz=timezone.utc), winner.name)
+            print(f"match_id={match_id}...", end="")
+            for name, cmd_stats in match.stats.items():
+                for cmd, stat in cmd_stats.items():
+                    store_match_cmd_stat(match.stats_db, match_id, name, cmd, stat)
+            print("done!")
     except Exception as e:
         print(f"Runner exception: {e!r}")
 
@@ -145,11 +161,13 @@ async def server_task(bind_addr: str = "127.0.0.1") -> None:
     aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(TEMPLATE_PATH))
 
     app["matches"] = {}
+    app["match_db"] = create_connection()
 
     app.router.add_get("/", index_handler)
-    app.router.add_get("/game/{match_id}", index_handler)
-    app.router.add_get("/api/watch/{match_id}", watch_handler)
-    app.router.add_get("/api/play/{match_id}", play_handler)
+    app.router.add_get("/game/{arena_id}", index_handler)
+    app.router.add_get("/api/watch/{arena_id}", watch_handler)
+    app.router.add_get("/api/play/{arena_id}", play_handler)
+    app.router.add_get("/api/leaderboard/{arena_id}", leaderboard_handler)
     app.router.add_static("/", STATIC_PATH, name="static", append_version=True)
     runner = web.AppRunner(app)
     await runner.setup()
@@ -173,14 +191,16 @@ async def watch_handler(request):
     ws = web.WebSocketResponse()
     await ws.prepare(request)
 
-    match_id = int(request.match_info["match_id"])
-    print(f"New request for match {match_id}")
+    arena_id = int(request.match_info["arena_id"])
+    print(f"New request for arena {arena_id}")
 
     async def send_updates():
         placeholder_arena = Arena()
         try:
             while True:
-                match = get_or_create_match(request.app["matches"], match_id, recycle=match_id == 0)
+                match = get_or_create_match(
+                    request.app["matches"], arena_id, recycle=arena_id == 0, db=request.app["match_db"]
+                )
                 delay_line = match.arena_state_delay_line
                 # Wait until enough time has passed before we start sending results
                 while len(delay_line) < ARENA_STATE_DELAY_LINE_LEN:
@@ -239,8 +259,8 @@ async def play_handler(request):
     ws = web.WebSocketResponse()
     await ws.prepare(request)
 
-    match_id = int(request.match_info["match_id"])
-    match = get_or_create_match(request.app["matches"], match_id, recycle=True)
+    arena_id = int(request.match_info["arena_id"])
+    match = get_or_create_match(request.app["matches"], arena_id, recycle=True, db=request.app["match_db"])
 
     async def send_updates():
         try:
@@ -344,6 +364,14 @@ async def play_handler(request):
     print("websocket connection closed")
 
     return ws
+
+
+def leaderboard_handler(request):
+    arena_id = int(request.match_info["arena_id"])
+    if arena_id < 0 or arena_id > MAX_ARENA_ID:
+        raise web.HTTPNotFound
+    data = get_leaderboard(request.app["match_db"], arena_id)
+    return web.json_response(data)
 
 
 async def amain():

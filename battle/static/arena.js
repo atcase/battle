@@ -10,18 +10,59 @@ var arena = null;
 var lastUpdate = null;
 var webSocket = null;
 var stars = [];
+var leaderboardUpdated = false;
+
+function getArenaId() {
+    var loc = window.location;
+    const prefix = "/game/";
+    var arenaId = "0";
+
+    if (loc.pathname.startsWith(prefix)) {
+        arenaId = loc.pathname.slice(prefix.length);
+    }
+    return arenaId;
+}
+
+async function updateLeaderboard() {
+    var leaderboardBody = document.getElementById("leaderboardBody");
+    if (leaderboardUpdated) {
+        return;
+    }
+    let loc = window.location;
+    let arenaId = getArenaId();
+    let leaderboardUrl = `${loc.protocol}//${loc.host}/api/leaderboard/${arenaId}`
+    let response = await fetch(leaderboardUrl);
+    let leaderboardData = await response.json();
+    console.log(leaderboardData);
+
+    while (leaderboardBody.hasChildNodes()) {
+        leaderboardBody.removeChild(leaderboardBody.lastChild);
+    }
+
+    _.forEach(leaderboardData, (data, position) => {
+        console.log(data, position);
+        let tdRow = document.createElement("tr");
+        leaderboardBody.appendChild(tdRow);
+        let tdPos = document.createElement("td");
+        tdPos.innerText = position + 1;
+        tdRow.appendChild(tdPos);
+        _.map(data, d => {
+            let tdD = document.createElement("td");
+            tdD.innerText = d;
+            tdRow.appendChild(tdD);
+        });
+    });
+    leaderboardUpdated = true;
+}
 
 function openSocket() {
     var loc = window.location;
     var scheme = loc.protocol === "https:" ? "wss:" : "ws:";
-    const prefix = "/game/";
-    var gameId = "0";
+    var arenaId = getArenaId();
 
-    if (loc.pathname.startsWith(prefix)) {
-        gameId = loc.pathname.slice(prefix.length);
-    }
+    document.title = `Battlefield Arena ${arenaId}`
 
-    webSocket = new WebSocket(`${scheme}//${loc.host}/api/watch/${gameId}`);
+    webSocket = new WebSocket(`${scheme}//${loc.host}/api/watch/${arenaId}`);
 
     webSocket.onopen = function (event) {
         console.log("open websocket")
@@ -54,6 +95,8 @@ const transpose = function (obj) {
 }
 
 window.onload = function () {
+    let battlefieldHeader = document.getElementById("battlefieldHeader");
+    battlefieldHeader.innerText = `Battlefield #${getArenaId()}`;
     laserImage = document.getElementById("laser");
     hullImage = document.getElementById("ship");
     turretImage = document.getElementById("turret");
@@ -72,6 +115,7 @@ window.onload = function () {
     for (var i=0; i<2000; i++) {
         stars.push(randomStar());
     }
+    updateLeaderboard();
 }
 
 function randomStar() {
@@ -105,6 +149,7 @@ function draw(timestamp) {
         ctx.scale(galaxyScale, galaxyScale);
         ctx.drawImage(galaxyImage, -galaxyImage.width / 2, -galaxyImage.height / 2);
         ctx.restore();
+        leaderboardUpdated = false;
     }
 
     ctx.fillStyle = `white`;
@@ -201,6 +246,9 @@ function draw(timestamp) {
         ctx.font = '64px monospace';
         ctx.textAlign = 'center';
         ctx.fillText(`Winner ${arena.winner}!`, 500, 500);
+        if (!leaderboardUpdated) {
+            updateLeaderboard();
+        }
         window.requestAnimationFrame(draw);
     }
 }
