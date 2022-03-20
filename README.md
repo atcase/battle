@@ -5,9 +5,13 @@ to fight a battle against other players.
 
 ![](battle_demo.gif)
 
-Install from GitHub, with:
+Install from PyPI, with:
 
-    $ python3 -m pip install git+https://github.com/atcase/battle.git --user
+    $ python3 -m pip install battle
+
+or alternatively from GitHub, with:
+
+    $ python3 -m pip install git+https://github.com/atcase/battle.git
 
 A sample robot battlefield server can then be run with:
 
